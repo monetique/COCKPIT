@@ -1,0 +1,212 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Transition globale lors du changement de thème ─── */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+@layer base {
+  * { box-sizing: border-box; }
+
+  html { font-size: 14px; }
+
+  /* ── DARK MODE (défaut) ────────────────────────────── */
+  html.dark body {
+    font-family: 'DM Sans', sans-serif;
+    background  : #0b0e14;
+    color       : #e8eaf0;
+    line-height : 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 3px; }
+  html.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
+
+  html.dark input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 100px #181d2a inset !important;
+    -webkit-text-fill-color: #e8eaf0 !important;
+  }
+
+  /* ── LIGHT MODE ────────────────────────────────────── */
+  html.light body {
+    font-family: 'DM Sans', sans-serif;
+    background  : #f1f5f9;
+    color       : #0f172a;
+    line-height : 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html.light ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 3px; }
+  html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.3); }
+
+  html.light input:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 100px #ffffff inset !important;
+    -webkit-text-fill-color: #0f172a !important;
+  }
+
+  /* ── Variables CSS — DARK ──────────────────────────── */
+  html, html.dark {
+    --color-bg      : #0b0e14;
+    --color-surface : #111520;
+    --color-surface2: #181d2a;
+    --color-surface3: #1f2535;
+    --color-border  : rgba(255,255,255,0.06);
+    --color-border2 : rgba(255,255,255,0.10);
+    --color-primary : #e8eaf0;
+    --color-secondary: #8b92a5;
+    --color-tertiary: #565e73;
+    --shadow-card   : 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* ── Variables CSS — LIGHT ─────────────────────────── */
+  html.light {
+    --color-bg      : #f1f5f9;
+    --color-surface : #ffffff;
+    --color-surface2: #f8fafc;
+    --color-surface3: #e2e8f0;
+    --color-border  : rgba(0,0,0,0.08);
+    --color-border2 : rgba(0,0,0,0.12);
+    --color-primary : #0f172a;
+    --color-secondary: #475569;
+    --color-tertiary: #94a3b8;
+    --shadow-card   : 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  input, textarea, select {
+    outline: none;
+    font-family: inherit;
+  }
+}
+
+
+/* ── Components ───────────────────────────────────────── */
+@layer components {
+
+  /* Card */
+  .card {
+    @apply bg-surface border border-border rounded-lg;
+  }
+  .card-lg {
+    @apply bg-surface border border-border rounded-xl;
+  }
+
+  /* Input */
+  .input {
+    @apply w-full bg-surface2 border border-border2 rounded-lg px-3 py-2
+           text-primary placeholder-tertiary text-sm
+           focus:border-brand focus:ring-1 focus:ring-brand/20
+           transition-colors duration-150;
+  }
+
+  /* Button */
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg
+           font-medium text-sm transition-all duration-150
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-brand hover:bg-brand-l text-white;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-surface3 text-secondary hover:text-primary
+           border border-border hover:border-border2;
+  }
+  .btn-danger {
+    @apply btn bg-danger-dim hover:bg-danger/20 text-danger border border-danger/20;
+  }
+  .btn-success {
+    @apply btn bg-success-dim hover:bg-success/20 text-success border border-success/20;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-success { @apply badge bg-success-dim text-success; }
+  .badge-danger  { @apply badge bg-danger-dim  text-danger;  }
+  .badge-warning { @apply badge bg-warning-dim text-warning; }
+  .badge-info    { @apply badge bg-info-dim    text-info;    }
+  .badge-neutral { @apply badge bg-surface3    text-secondary; }
+
+  /* Table */
+  .table-wrap { @apply w-full overflow-x-auto; }
+  .data-table { @apply w-full border-collapse text-sm; }
+  .data-table thead tr {
+    @apply border-b border-border bg-surface2;
+  }
+  .data-table thead th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase
+           tracking-wider text-tertiary whitespace-nowrap;
+  }
+  .data-table tbody tr {
+    @apply border-b transition-colors duration-100;
+    border-bottom-color: var(--color-border);
+  }
+  .data-table tbody tr:hover {
+    @apply transition-colors duration-100;
+    background-color: var(--color-surface2);
+    opacity: 1;
+  }
+  .data-table tbody td {
+    @apply px-4 py-3 text-secondary whitespace-nowrap;
+  }
+
+  /* Nav link */
+  .nav-link {
+    @apply flex items-center gap-2.5 px-3 py-2.5 rounded-lg
+           text-sm font-medium text-secondary
+           hover:text-primary hover:bg-surface3
+           transition-all duration-150;
+  }
+  .nav-link.active {
+    @apply text-primary bg-surface3 border-l-2 border-brand;
+  }
+
+  /* Stat card */
+  .stat-card {
+    @apply card p-4 flex flex-col gap-1;
+  }
+
+  /* Separator */
+  .sep { @apply border-t border-border my-4; }
+
+  /* Mono value */
+  .mono { @apply font-mono text-xs; }
+
+  /* Section title */
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-widest text-tertiary mb-3;
+  }
+}
+
+/* ── Utilities ────────────────────────────────────────── */
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #60a5fa, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .glow-brand {
+    box-shadow: 0 0 20px rgba(29,78,216,.25);
+  }
+
+  /* Animated underline */
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-0 h-px bg-brand transition-all duration-300;
+  }
+  .link-underline:hover::after { @apply w-full; }
+}

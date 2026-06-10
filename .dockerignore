@@ -1,0 +1,17 @@
+# Backend
+node_modules
+
+# Frontend — NE PAS exclure frontend/src ni frontend/node_modules ici
+# On ignore seulement les node_modules du frontend (lourd, inutile dans le contexte)
+frontend/node_modules
+
+# Divers
+.git
+*.log
+Documentation/
+cahiers_inbox/
+cahiers_outbox/
+*.eml
+*.rar
+mnt/
+public/

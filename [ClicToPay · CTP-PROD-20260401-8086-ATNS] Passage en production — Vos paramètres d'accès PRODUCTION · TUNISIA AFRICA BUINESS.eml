@@ -1,0 +1,401 @@
+Received: from PAXPR06MB8079.eurprd06.prod.outlook.com (2603:10a6:102:1a9::24)
+ by PAXPR06MB7598.eurprd06.prod.outlook.com with HTTPS; Wed, 1 Apr 2026
+ 12:57:57 +0000
+Received: from CWLP123CA0226.GBRP123.PROD.OUTLOOK.COM (2603:10a6:400:19f::11)
+ by PAXPR06MB8079.eurprd06.prod.outlook.com (2603:10a6:102:1a9::24) with
+ Microsoft SMTP Server (version=TLS1_2,
+ cipher=TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384) id 15.20.9769.17; Wed, 1 Apr
+ 2026 12:57:55 +0000
+Received: from AMS0EPF00000192.eurprd05.prod.outlook.com
+ (2603:10a6:400:19f:cafe::e7) by CWLP123CA0226.outlook.office365.com
+ (2603:10a6:400:19f::11) with Microsoft SMTP Server (version=TLS1_3,
+ cipher=TLS_AES_256_GCM_SHA384) id 15.20.9745.31 via Frontend Transport; Wed,
+ 1 Apr 2026 12:57:55 +0000
+Authentication-Results: spf=pass (sender IP is 196.224.96.4)
+ smtp.mailfrom=clictopay.com; dkim=none (message not signed)
+ header.d=none;dmarc=bestguesspass action=none
+ header.from=clictopay.com;compauth=pass reason=109
+Received-SPF: Pass (protection.outlook.com: domain of clictopay.com designates
+ 196.224.96.4 as permitted sender) receiver=protection.outlook.com;
+ client-ip=196.224.96.4; helo=vip02.outgw.orange.tn; pr=C
+Received: from vip02.outgw.orange.tn (196.224.96.4) by
+ AMS0EPF00000192.mail.protection.outlook.com (10.167.16.218) with Microsoft
+ SMTP Server id 15.20.9769.17 via Frontend Transport; Wed, 1 Apr 2026 12:57:53
+ +0000
+X-KAS-Status: KAS_STATUS_NOT_SPAM
+X-KAS-Level: []
+X-KAS-Method: none
+X-KAV-Status: CLEAN
+Received: from [10.46.2.61] (HELO orange.net.tn)
+  by vip02.outgw.orange.tn (CommuniGate Pro SMTP 7.1.8)
+  with ESMTP id 111157361; Wed, 01 Apr 2026 13:47:31 +0100
+X-Virus-Scanned: by cgpav
+Received: from [197.14.52.162] (account webmaster@clictopay.com HELO [127.0.0.1])
+  by planet.tn (CommuniGate Pro SMTP 6.2.15)
+  with ESMTPSA id 1853991982; Wed, 01 Apr 2026 13:54:19 +0100
+From: Support ClicToPay <webmaster@clictopay.com>
+To: <malek@we-pay.io>
+CC: <Ines.ABDALLAH@monetiquetunisie.com>,
+	<wissem.baghdadi@monetiquetunisie.com>
+Subject: =?UTF-8?Q?=5BClicToPay_=C2=B7_CTP-PROD-20260401-80?=
+ =?UTF-8?Q?86-ATNS=5D_Passage_en_production_?=
+ =?UTF-8?Q?=E2=80=94_Vos_param=C3=A8tres_d=27acc?=
+ =?UTF-8?Q?=C3=A8s_PRODUCTION_=C2=B7_TUNISIA_AFRICA?= =?UTF-8?Q?_BUINESS?=
+Message-ID: <f872ac73-5f26-8e9a-6b61-0928956c9799@clictopay.com>
+Content-Transfer-Encoding: quoted-printable
+Date: Wed, 1 Apr 2026 12:57:50 +0000
+Content-Type: text/html; charset="utf-8"
+Return-Path: webmaster@clictopay.com
+X-MS-Exchange-Organization-ExpirationStartTime: 01 Apr 2026 12:57:53.9731
+ (UTC)
+X-MS-Exchange-Organization-ExpirationStartTimeReason: OriginalSubmit
+X-MS-Exchange-Organization-ExpirationInterval: 1:00:00:00.0000000
+X-MS-Exchange-Organization-ExpirationIntervalReason: OriginalSubmit
+X-MS-Exchange-Organization-Network-Message-Id: 863452fb-ba91-4413-9ce5-08de8fee4a00
+X-EOPAttributedMessage: 0
+X-EOPTenantAttributedMessage: 226a9804-5e31-46ee-ad4a-814c96dca841:0
+X-MS-Exchange-Organization-MessageDirectionality: Incoming
+X-MS-PublicTrafficType: Email
+X-MS-TrafficTypeDiagnostic: AMS0EPF00000192:EE_|PAXPR06MB8079:EE_|PAXPR06MB7598:EE_
+X-MS-Exchange-Organization-AuthSource: AMS0EPF00000192.eurprd05.prod.outlook.com
+X-MS-Exchange-Organization-AuthAs: Anonymous
+X-MS-Office365-Filtering-Correlation-Id: 863452fb-ba91-4413-9ce5-08de8fee4a00
+X-MS-Exchange-Organization-SCL: -1
+X-Microsoft-Antispam: BCL:0;ARA:13230040|704161111799003|16102099003|19002099003|8096899003|57112099003;
+X-Forefront-Antispam-Report: CIP:196.224.96.4;CTRY:TN;LANG:fr;SCL:-1;SRV:;IPV:NLI;SFV:SFE;H:vip02.outgw.orange.tn;PTR:vip02.outgw.orange.tn;CAT:NONE;SFS:(13230040)(704161111799003)(16102099003)(19002099003)(8096899003)(57112099003);DIR:INB;
+X-MS-Exchange-CrossTenant-OriginalArrivalTime: 01 Apr 2026 12:57:53.7719
+ (UTC)
+X-MS-Exchange-CrossTenant-Network-Message-Id: 863452fb-ba91-4413-9ce5-08de8fee4a00
+X-MS-Exchange-CrossTenant-Id: 226a9804-5e31-46ee-ad4a-814c96dca841
+X-MS-Exchange-CrossTenant-AuthSource: AMS0EPF00000192.eurprd05.prod.outlook.com
+X-MS-Exchange-CrossTenant-AuthAs: Anonymous
+X-MS-Exchange-CrossTenant-FromEntityHeader: Internet
+X-MS-Exchange-Transport-CrossTenantHeadersStamped: PAXPR06MB8079
+X-MS-Exchange-Transport-EndToEndLatency: 00:00:03.8623085
+X-MS-Exchange-Processed-By-BccFoldering: 15.20.9745.022
+X-Microsoft-Antispam-Mailbox-Delivery:
+	wl:1;pcwl:1;ucf:0;jmr:0;auth:0;dest:I;ENG:(910005)(944506478)(944626604)(920097)(811242)(255002)(410001)(930201)(20251009189)(140003);
+X-Microsoft-Antispam-Message-Info:
+	=?utf-8?B?Sy9xbGc2MWxOUlQvcThialJXdVNPZEFMN1FxNjF5MUtnOW5VTldobXdERHU3?=
+ =?utf-8?B?SXl1cXAwNmxMdnVMMmhpOGZLa1FvMUFHTXc5UEQ4M1lHZXJlTExtMFh3d1lp?=
+ =?utf-8?B?U0ZuTElabUc1UnVPN2dFZnZoRzdSRUl2bGltcGt4UUMybWpwZzg0RjByc1hr?=
+ =?utf-8?B?dGQrc2JFdlpKTHZiVUF5MkZWYWZ3TGRpY0NMdHNHbkpHWUVuTUpPRHQ4M2lI?=
+ =?utf-8?B?Uk54TmQxY01WVHdFck52SXVHdzN3RVJXeHRsWVFKai9pUTFMSVhPRFVURlVr?=
+ =?utf-8?B?UkNLWFV3OEJCRWZ0Um9OMXhXVVkxbER1MElWV05zU0lYdlNDSFUwTGd5d0xZ?=
+ =?utf-8?B?M0htTVBwV1BGM1k5QW9JK0lPeVZEQjYwUUx1RTRMR25qZVdKc3lMU2hOaWZR?=
+ =?utf-8?B?Vzg0TW9MTDdpUng2S2lkdVltd2xzYzdMVWJiME1ZY2RyTXhDRXVoUkk5N0FZ?=
+ =?utf-8?B?a0VwZERxZDFiMXhVMjdKM3A2bTZCNWE2YTZhc2lVaDZadHo3U0VVVFM0eDM1?=
+ =?utf-8?B?RVAzUXdkM3g3WitkUGFha0FUMnNFR0hBZUdVeTdUOUJNZWJaa3BLTXhJZzJE?=
+ =?utf-8?B?VTVrZlhYVkZYY0preERFOElJN0dabllVRjJmMEQwYlZTNW5FbzNXMUNWb3NT?=
+ =?utf-8?B?RnN2QlVpT2srSUFhckQyTDRVN2ZsVTZMSXpGZWFKWUNGdHlwMmFmWk51Y01E?=
+ =?utf-8?B?bUc2ajBCU01menR5ZkFXUzUweVRweDI0NXlkK2Y5eHpqZlRXV0JCNS9CdHc0?=
+ =?utf-8?B?OWJNK1U4eGVXQ1JDSGdDaDEyV3laOG44YjFTeDJXN0xaa21lSFRMRUlhUnJq?=
+ =?utf-8?B?ZnBjcEFDQ2FiQkUzNkgrb0pnbWt0QjNlc1FnQmx3UUROZWdTSlI4UTVldVBW?=
+ =?utf-8?B?MS9xM0JPb1F0bmVJZkU1ZyttMEFMdVBkd2ZUMGRkNmpYQ1BuejBLNzIxTjdF?=
+ =?utf-8?B?WW5zQTA4elBhTWtqaEtuZ1FXa3dwekU2VXl4a0ZjdTdzNFZiL0dsVlhRWGtn?=
+ =?utf-8?B?TjhwVE5QeGlScDN1ZFJyelBqM2U3a3hiNVhWVHlRNnJiZWV5UUpPNlo2Y0RJ?=
+ =?utf-8?B?ZmhUUlNUSnZ2ajVleS9IS3lDejM2MEdlOW82clNOTzZXUk5OMG8xdmFadkpP?=
+ =?utf-8?B?d1VmaXVRN0JkcUF2Y05hR1ROb3d1Q2Z5cmwrd3prOEVrdCthcElCN3FDcWFu?=
+ =?utf-8?B?bjVuazhNdlE1bEJKNmZxRThpQko5RTd3aVZmZFhCdFE4Y2tBL3doQmRBTUI2?=
+ =?utf-8?B?STFCTkFjMG0vMHJxdEh0cGJWL1lwYUJsRVY4bTVoSndoTnBuUWdJMnpIYWV3?=
+ =?utf-8?B?RjIrdEdtLzhwcWU1NlFDYTBWUmFRM3hkV005eWdmSnlnMWVtV0dZZkROMXdw?=
+ =?utf-8?B?Z3AvVkpoRUtPdW9jSFVMMEF0eGw1TWpOTWVEUjlUTVg2aDU5U2pkV2MrbEZO?=
+ =?utf-8?B?RzVlNnVTOGVzbm5PMXVCa1ExNVpXY0JBaXJuQWNMYkR6V3Eyd1d3bXdodUFv?=
+ =?utf-8?B?ZkJQbFpONjJKWDQ4MS9BdTNQNU42NnhQcFNoYVlIajJMbDl6YUk3WUdGRlA4?=
+ =?utf-8?B?aUFpWXg4L3ZEM2NCbmtnbGJCR0ordlhRdk91OVJ3eHRDWXRQYnUrYnA2Q3dZ?=
+ =?utf-8?B?N2svNG1BZnBtWVI2cEI4dkJGMW1LcGFuMlUxc2hKdC9GbU5Bdkp1eHk3WDU2?=
+ =?utf-8?B?SldVOXR5MWltQ3puMm80UlVUREtHZnRIdzBDWmgvR0hqT0lxNHFncjZCcWNx?=
+ =?utf-8?B?dUg3MEJyRUMxajMva2t0T0FsdGl3bDlLV3F3bHBTVFU2U1hwV2h3NVRwN2dS?=
+ =?utf-8?B?NjB2RzFsU2ZqTytWYjJteUpNcnJteHRybnhURmRLTDA4Rmd6YjRPdFlPMjRR?=
+ =?utf-8?B?UGVwZzdWNWRwRFh5UHFsc29QdFNKU05USUdqRGxEaG9hMjBmdmhVSzhiNzdm?=
+ =?utf-8?B?TWg4SlRMN3YzQ25QaVFqQ1pKMm5JaCtDRFJNNS9PTHBUZ3dSdDBBb2NWdXg0?=
+ =?utf-8?B?MmprYnU3dnovbU5VUFVFOGZEdW5oSzMvMnhtOXowMnRUY3htNEFxcE9PV2hx?=
+ =?utf-8?B?bkhFMzRWbXYyNEZiendSMFQxVWFUbHhybkwrTUJTSEg5YjkweVQ4czk3dHpy?=
+ =?utf-8?B?K2JDbkg0TmhaUnV4bWxJWkFtWExLZ2J5R2NtdVpGS1ZkOHpvRy9YalU4a0k4?=
+ =?utf-8?B?dm5XeGN4Vm9qYS90RGl5T2dGM0wrNDFzRDlLemtjRnJNN3N2eFVlN0xKdnBu?=
+ =?utf-8?B?WDVQVDE4ekIvdzFkTVY5d1ZoVDRyMGhQc0FxUjFZOHIwTWN4M3dvSTRFZDY1?=
+ =?utf-8?B?cTFxQkNJUzV2d3kremwyTmtzV2dDbVJGQzRENXNDQkgzRFJ2aURUUmdJQXB1?=
+ =?utf-8?B?NGpyTjB1R21lL3JZMWtZUFdHVG4zZUZKWTlMQlBBSkk2TnJOcHVwam8vRmRM?=
+ =?utf-8?B?Yzlld0ttK0RhY1pZUm5yR2N5ZmdQaEUxL2lzcS9sSytFMVV3ajZtM01PZ0oz?=
+ =?utf-8?B?NmFjcHpmR0RPK2JTS085WHVDdzVjZjIrS05mT3FueExpbC8rNC9ZRUNIYWph?=
+ =?utf-8?B?bm9vNExxejdLSi9SZXJPVjhiMzVvV2NDUFBtTFo0VjFzdkkrNkdDcXhGek4w?=
+ =?utf-8?B?QUFaSXNoa1hMYnd1TlJDdjVDQjBwTGhaeitpY2RNU1crRFAxVzZBb0FodWhT?=
+ =?utf-8?B?NmlReWFqeFRGRHRmdVlPbGtzVDRaTUdicnlzZWZ0djJ4YTBBcHA5NFJmV1lq?=
+ =?utf-8?B?ekJUNTFSb2pxWWN5RHdkNlZ2Z0MwRmNFdVlOM3hPUzZCZkdwQi9rVTZUeEI1?=
+ =?utf-8?B?OUJWNjJtM1ZUMXJHbU1rMllrVUtYRDdUMkZGMjIyQmtoaWo3N0t1cEFtUzdN?=
+ =?utf-8?B?ait4cVFnNmZZY2p2YkV4OFQ1VmxQTkNsRWxPYnRpNDZJRzNIOE5mNlNCT1VI?=
+ =?utf-8?B?S0NHZlZ1bnZ5VmJCODdZTytQWTEzNTM0K1RmbmMwM1JQTDlkTkEwbDA5MUdm?=
+ =?utf-8?B?K0cxa01KS1czM2pqV2dQNGV5K0F0ZEVtMGFYaTlVZUpzK3NIZGYzS2lLenJP?=
+ =?utf-8?B?TC9VNXJMZ05yQ3R4YStzRnJ4MlYrekMyeHRpWjFEdjI0RkozOXdLdS9FQndh?=
+ =?utf-8?B?NVJGSXFNZDFVenhjSHRveGtNMnNoRjY4dWZjdGdxQ042YlovVVVMUzlla1pU?=
+ =?utf-8?B?RUhkQUx0U3hmRDhsRC9scjE5K3ltRVZwSUlTbkFRNWZya0dqcG1YUmRvaTMy?=
+ =?utf-8?B?TjVZN21CajBrQU9BU0lBRWRtTGpYMHZPRnk3T0swUnhlQ0Jxck9lUWV4d3BQ?=
+ =?utf-8?B?QnlnVWxMcnVNZlR4VE9Pd0h3WmVMRWx2bTZkU3ZIVUU4NE91Z1VCT1pkZ3B4?=
+ =?utf-8?B?eUltbHBxZGxVWm1uMHR4WUloQm54ME94T1hYU1I0Wk1zWnhRVHd3a2RNOU1W?=
+ =?utf-8?B?cUd2L3JETlc0ckpYcGJsR29kci9zb29rWDZORUtjaWxhUFZaa3BEYkNObGR1?=
+ =?utf-8?B?UHBqSUZqazZTenNqcTBDR1FkdDN4MDFESTkrQTRHNDlORzBUUkNBVmwxZk50?=
+ =?utf-8?B?cjhzZmhpYUVpUXV4ZU85YS9hOVgzVWZvc3U1MndSa2tqYUovam03OTE3MVpV?=
+ =?utf-8?Q?a9epZxBnNPyk=3D?=
+MIME-Version: 1.0
+
+<!DOCTYPE html><html lang=3D"fr"><head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:Arial,sans-serif;background:#f4f6f9;}
+  .wrap{max-width:620px;margin:24px auto;background:#fff;border-radius:8px;
+        box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;}
+  .hdr{background:#0f2444;padding:20px 32px;}
+  .hdr-title{color:#fff;font-size:16px;font-weight:700;}
+  .hdr-sub{color:#93c5fd;font-size:11px;margin-top:4px;}
+  .hdr-badge{display:inline-block;background:#10b981;color:#fff;padding:3px=
+ 12px;
+             border-radius:20px;font-size:10px;font-weight:700;margin-top:8=
+px;}
+  .hdr-ref{font-family:'Courier New',monospace;font-size:10px;color:#60a5fa=
+;margin-top:6px;}
+  .body{padding:24px 32px;}
+  .footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:12px 32px=
+;
+          text-align:center;font-size:10px;color:#94a3b8;}
+</style>
+</head><body>
+<div class=3D"wrap">
+  <div class=3D"hdr">
+    <div class=3D"hdr-title">ClicToPay =E2=80=94 Passage en Production</div=
+>
+    <div class=3D"hdr-sub">Vos param=C3=A8tres d'acc=C3=A8s =C3=A0 l'enviro=
+nnement de production</div>
+    <div class=3D"hdr-badge">=E2=9C=93 PRODUCTION ACTIV=C3=89E</div>
+    <div class=3D"hdr-ref">R=C3=A9f. CTP-PROD-20260401-8086-ATNS</div>
+  </div>
+  <div class=3D"body">
+   =20
+<p style=3D"margin-bottom:14px;font-size:13px;font-weight:600;">Madame, Mon=
+sieur,</p>
+
+<p style=3D"margin-bottom:14px;">
+  Nous avons le plaisir de vous informer que votre espace marchand
+  <strong>TUNISIA AFRICA BUINESS</strong> est d=C3=A9sormais activ=C3=A9 su=
+r l'environnement de
+  <strong>PRODUCTION</strong>. Votre int=C3=A9gration a =C3=A9t=C3=A9 valid=
+=C3=A9e avec succ=C3=A8s.
+</p>
+
+<p style=3D"margin-bottom:14px;">Veuillez trouver ci-dessous vos param=C3=
+=A8tres d'acc=C3=A8s =C3=A0 la plateforme de production :</p>
+
+<table style=3D"width:100%;border-collapse:collapse;margin:10px 0 14px;font=
+-size:12px;">
+  <thead><tr style=3D"background:#0f2444;">
+    <th colspan=3D"2" style=3D"color:#fff;padding:8px 12px;text-align:left;=
+font-size:11px;letter-spacing:.4px;">
+      =F0=9F=8F=AA INFORMATIONS MARCHAND
+    </th>
+  </tr></thead>
+  <tbody>
+    <tr style=3D"background:#fff">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Raison sociale</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">TUNISIA AFRI=
+CA BUINESS</td>
+      </tr><tr style=3D"background:#f8fafc">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Processing ID</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">0107858086</=
+td>
+      </tr><tr style=3D"background:#fff">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Terminal ID</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">0106202013</=
+td>
+      </tr>
+  </tbody>
+</table>
+
+<table style=3D"width:100%;border-collapse:collapse;margin:10px 0 14px;font=
+-size:12px;">
+  <thead><tr style=3D"background:#1d4ed8;">
+    <th colspan=3D"2" style=3D"color:#fff;padding:8px 12px;text-align:left;=
+font-size:11px;letter-spacing:.4px;">
+      =F0=9F=94=97 API PAIEMENT =E2=80=94 PRODUCTION
+    </th>
+  </tr></thead>
+  <tbody>
+    <tr style=3D"background:#fff">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">URL API</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">https://ipay=
+.clictopay.com/payment/rest</td>
+      </tr><tr style=3D"background:#f8fafc">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Nom d'utilisateur</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">0107858086</=
+td>
+      </tr><tr style=3D"background:#fff">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Mot de passe</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#dc2626;">z7PmJ2kq</td=
+>
+      </tr>
+  </tbody>
+</table>
+
+<table style=3D"width:100%;border-collapse:collapse;margin:10px 0 14px;font=
+-size:12px;">
+  <thead><tr style=3D"background:#15803d;">
+    <th colspan=3D"2" style=3D"color:#fff;padding:8px 12px;text-align:left;=
+font-size:11px;letter-spacing:.4px;">
+      =F0=9F=93=8A PORTAIL MONITORING =E2=80=94 PRODUCTION
+    </th>
+  </tr></thead>
+  <tbody>
+    <tr style=3D"background:#fff">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">URL du portail</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">https://port=
+al.clictopay.com/epg_gui/</td>
+      </tr><tr style=3D"background:#f8fafc">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Nom d'utilisateur</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#0f2444;">0107858086_O=
+P</td>
+      </tr><tr style=3D"background:#fff">
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;color=
+:#475569;font-weight:600;width:45%;">Mot de passe</td>
+        <td style=3D"padding:7px 12px;border-bottom:1px solid #e2e8f0;font-=
+family:'Courier New',monospace;font-weight:700;color:#dc2626;">d2ZLf3nq</td=
+>
+      </tr>
+  </tbody>
+</table>
+
+<div style=3D"background:#fff7ed;border-left:3px solid #f59e0b;padding:10px=
+ 14px;
+  margin-bottom:14px;font-size:12px;color:#78350f;">
+  =E2=9A=A0=EF=B8=8F <strong>S=C3=A9curit=C3=A9 =E2=80=94 Action requise :<=
+/strong> Ces identifiants sont strictement confidentiels.
+  Modifiez vos mots de passe d=C3=A8s la premi=C3=A8re connexion. Ne les co=
+mmuniquez =C3=A0 aucun tiers.
+  Ne stockez jamais les donn=C3=A9es de carte bancaire sur vos serveurs.
+</div>
+
+<table style=3D"width:100%;border-collapse:collapse;margin:10px 0 14px;font=
+-size:12px;">
+  <thead><tr style=3D"background:#dc2626;">
+    <th colspan=3D"2" style=3D"color:#fff;padding:8px 12px;text-align:left;=
+font-size:11px;letter-spacing:.4px;">
+      =F0=9F=9B=A1 CONSIGNES DE S=C3=89CURIT=C3=89 ANTI-FRAUDE =E2=80=94 OB=
+LIGATOIRES
+    </th>
+  </tr></thead>
+  <tbody>
+   =20
+      <tr style=3D"background:#fff;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">Transactions suspec=
+tes</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">Signalez imm=C3=A9diatement =C3=A0 votre banque a=
+cqu=C3=A9reur  toute transaction suspecte : montant =C3=A9lev=C3=A9, plusie=
+urs transactions avec le m=C3=AAme num=C3=A9ro de carte / adresse IP / nom =
+/ e-mail / BIN (4 premiers chiffres de la carte).</td>
+      </tr>
+      <tr style=3D"background:#fef2f2;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">Donn=C3=A9es client=
+s</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">Collectez le maximum d'informations lors de l'ins=
+cription de vos clients. Exigez un KYC (CIN, justificatif) pour permettre l=
+e rapprochement en cas de litige.</td>
+      </tr>
+      <tr style=3D"background:#fff;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">Donn=C3=A9es de car=
+te</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">=E2=9B=94 Ne stockez jamais les donn=C3=A9es de c=
+arte bancaire (num=C3=A9ro, CVV, date d'expiration) sur vos serveurs. Cette=
+ pratique est strictement interdite par les normes PCI-DSS.</td>
+      </tr>
+      <tr style=3D"background:#fef2f2;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">D=C3=A9lai de livra=
+ison</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">Assurez la livraison du produit ou service dans u=
+n d=C3=A9lai minimum de 72h apr=C3=A8s le paiement, afin de permettre aux s=
+ervices anti-fraude des banques =C3=A9mettrices de r=C3=A9agir.</td>
+      </tr>
+      <tr style=3D"background:#fff;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">V=C3=A9rification i=
+dentit=C3=A9</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">Pour tout achat physique, exigez la pi=C3=A8ce d'=
+identit=C3=A9 et la carte bancaire. V=C3=A9rifiez la coh=C3=A9rence entre l=
+e nom sur la carte et le document d'identit=C3=A9 pr=C3=A9sent=C3=A9.</td>
+      </tr>
+      <tr style=3D"background:#fef2f2;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">V=C3=A9rification c=
+arte</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">Comparez les donn=C3=A9es de la transaction (nom,=
+ BIN, expiration) avec la carte physique pr=C3=A9sent=C3=A9e par le porteur=
+.</td>
+      </tr>
+      <tr style=3D"background:#fff;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">Alertes transaction=
+s</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">Activez les alertes de transaction sur votre port=
+ail de monitoring pour =C3=AAtre notifi=C3=A9 en temps r=C3=A9el des paieme=
+nts et anomalies.</td>
+      </tr>
+      <tr style=3D"background:#fef2f2;">
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#dc2626;font-weight:700;
+          font-size:11px;width:30%;vertical-align:top;">Contestations (Char=
+geback)</td>
+        <td style=3D"padding:8px 12px;border-bottom:1px solid #fecaca;color=
+:#374151;font-size:12px;">En cas de contestation, conservez toutes les preu=
+ves de transaction (logs, confirmation de livraison, correspondances client=
+) pendant au moins 18 mois.</td>
+      </tr>
+  </tbody>
+</table>
+
+<p style=3D"margin-bottom:6px;font-size:13px;">
+  Notre =C3=A9quipe reste disponible pour vous accompagner dans cette nouve=
+lle =C3=A9tape.
+</p>
+<p style=3D"margin-bottom:14px;font-size:13px;">
+  Bien cordialement,<br>
+  <strong>L'=C3=A9quipe ClicToPay =E2=80=94 Monetique Tunisie</strong><br>
+  <span style=3D"color:#2563eb;">webmaster@clictopay.com</span>
+</p>
+  </div>
+  <div class=3D"footer">
+    ClicToPay =C2=B7 Monetique Tunisie =C2=B7 Plateforme de paiement =C3=A9=
+lectronique s=C3=A9curis=C3=A9e =C2=B7 2026
+  </div>
+</div>
+</body></html>

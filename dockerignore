@@ -1,0 +1,24 @@
+# Node modules — jamais dans l'image
+node_modules
+frontend/node_modules
+
+# Sources frontend — pas nécessaires (on copie seulement dist/)
+frontend/src
+frontend/public
+frontend/index.html
+frontend/vite.config.*
+frontend/tailwind.config.*
+frontend/postcss.config.*
+
+# Fichiers inutiles
+.env
+*.log
+logs/
+cahiers_outbox/
+migration_exports/
+backups/
+.git
+.gitignore
+README.md
+*.ps1
+migrate_db.*

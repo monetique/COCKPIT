@@ -1,0 +1,146 @@
+# docker-compose.yml — SMT COCKPIT v2
+# Usage : docker-compose up -d
+# Mise à jour : docker-compose up -d --build
+
+services:
+
+  # ── Application SMT COCKPIT ──────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smt-cockpit:latest
+    container_name: smt-cockpit-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3005}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: 0.0.0.0
+
+      # PostgreSQL
+      PG_HOST:     ${PG_HOST:-postgres}
+      PG_PORT:     ${PG_PORT:-5432}
+      PG_DATABASE: ${PG_DATABASE:-clictopay_db}
+      PG_USER:     ${PG_USER:-postgres}
+      PG_PASSWORD: ${PG_PASSWORD:-changeme}
+
+      # JWT — obligatoire dans .env
+      JWT_SECRET:         ${JWT_SECRET:-changeme_jwt_secret_32chars_minimum}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme_refresh_secret_32chars_min}
+
+      # SMTP
+      SMTP_HOST:         ${SMTP_HOST:-}
+      SMTP_PORT:         ${SMTP_PORT:-587}
+      SMTP_USER:         ${SMTP_USER:-}
+      SMTP_PASS:         ${SMTP_PASS:-}
+      SMTP_CC:           ${SMTP_CC:-}
+      SMTP_FROM_NAME:    ${SMTP_FROM_NAME:-Support ClicToPay}
+      SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-}
+
+      # ClicToPay TEST
+      CTP_TEST_API_URL:     ${CTP_TEST_API_URL:-https://test.clictopay.com/payment/rest}
+      CTP_TEST_MONITOR_URL: ${CTP_TEST_MONITOR_URL:-https://test.clictopay.com/epg_gui/}
+      CTP_SUPPORT_EMAIL:    ${CTP_SUPPORT_EMAIL:-webmaster@clictopay.com}
+
+      # ClicToPay PROD
+      CTP_PROD_API_URL:        ${CTP_PROD_API_URL:-https://ipay.clictopay.com/payment/rest}
+      CTP_PROD_MONITORING_URL: ${CTP_PROD_MONITORING_URL:-https://portal.clictopay.com/epg_gui/}
+
+      # Oracle BPC — variables utilisées par le code (DB_*)
+      DB_USER:     ${DB_USER:-}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_HOST:     ${DB_HOST:-}
+      DB_PORT:     ${DB_PORT:-1521}
+      DB_SERVICE:  ${DB_SERVICE:-}
+
+      # Oracle Merchants PROD
+      MERCHANTS_PROD_USER:     ${MERCHANTS_PROD_USER:-}
+      MERCHANTS_PROD_PASSWORD: ${MERCHANTS_PROD_PASSWORD:-}
+      MERCHANTS_PROD_HOST:     ${MERCHANTS_PROD_HOST:-}
+      MERCHANTS_PROD_PORT:     ${MERCHANTS_PROD_PORT:-1521}
+      MERCHANTS_PROD_SERVICE:  ${MERCHANTS_PROD_SERVICE:-}
+
+      # Oracle Merchants TEST
+      MERCHANTS_TEST_USER:     ${MERCHANTS_TEST_USER:-}
+      MERCHANTS_TEST_PASSWORD: ${MERCHANTS_TEST_PASSWORD:-}
+      MERCHANTS_TEST_HOST:     ${MERCHANTS_TEST_HOST:-}
+      MERCHANTS_TEST_PORT:     ${MERCHANTS_TEST_PORT:-1521}
+      MERCHANTS_TEST_SERVICE:  ${MERCHANTS_TEST_SERVICE:-}
+
+      # SQL Server PAYSMART
+      MSSQL_USER:     ${MSSQL_USER:-}
+      MSSQL_PASSWORD: ${MSSQL_PASSWORD:-}
+      MSSQL_HOST:     ${MSSQL_HOST:-}
+      MSSQL_PORT:     ${MSSQL_PORT:-1433}
+      MSSQL_DATABASE: ${MSSQL_DATABASE:-}
+
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+
+      # Logging
+      LOG_LEVEL:   ${LOG_LEVEL:-info}
+      LOG_CONSOLE: ${LOG_CONSOLE:-true}
+
+    volumes:
+      - smt-logs:/app/logs
+      - smt-cahiers:/app/cahiers_outbox
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - smt-network
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ── PostgreSQL ───────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: smt-cockpit-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${PG_DATABASE:-clictopay_db}
+      POSTGRES_USER:     ${PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-changeme}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - smt-pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    ports:
+      - "${PG_EXTERNAL_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-postgres} -d ${PG_DATABASE:-clictopay_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - smt-network
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+# ── Volumes persistants ───────────────────────────────────
+volumes:
+  smt-pgdata:
+    name: smt-cockpit-pgdata
+  smt-logs:
+    name: smt-cockpit-logs
+  smt-cahiers:
+    name: smt-cockpit-cahiers
+
+# ── Réseau interne ────────────────────────────────────────
+networks:
+  smt-network:
+    name: smt-cockpit-network
+    driver: bridge
