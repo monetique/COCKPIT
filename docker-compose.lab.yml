@@ -1,0 +1,70 @@
+# docker-compose.lab.yml
+# COCKPIT LAB — Environnement de développement isolé
+# NE PAS utiliser en production
+
+name: cockpit-lab
+
+services:
+  lab-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cockpit-lab-app
+    restart: unless-stopped
+    ports:
+      - "3008:3000"
+    env_file:
+      - .env.lab
+    depends_on:
+      lab-db:
+        condition: service_healthy
+      lab-mail:
+        condition: service_started
+    volumes:
+      - lab-logs:/app/logs
+      - lab-cahiers:/app/cahiers
+    networks:
+      - lab-network
+
+  lab-db:
+    image: postgres:16-alpine
+    container_name: cockpit-lab-db
+    restart: unless-stopped
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_USER: cockpit_lab_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: cockpit_lab
+    volumes:
+      - lab-pgdata:/var/lib/postgresql/data
+    networks:
+      - lab-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cockpit_lab_user -d cockpit_lab"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  lab-mail:
+    image: mailhog/mailhog:latest
+    container_name: cockpit-lab-mail
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # Interface web Mailhog
+      - "1025:1025"   # SMTP
+    networks:
+      - lab-network
+
+volumes:
+  lab-pgdata:
+    name: lab-pgdata
+  lab-logs:
+    name: lab-logs
+  lab-cahiers:
+    name: lab-cahiers
+
+networks:
+  lab-network:
+    name: lab-network
+    driver: bridge

@@ -1,0 +1,42 @@
+# Secrets / config locale (toutes variantes)
+.env
+*.env*
+!.env.*.example
+
+# Dépendances & builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+
+# Données d'exécution
+logs/
+cahiers/
+cahiers_inbox/
+cahiers_outbox/
+migration_exports/
+
+# Dumps à la racine (les migrations db/*.sql restent versionnées)
+/*.sql
+!/schema.sql
+*.dump
+*.backup
+
+# Divers
+.DS_Store
+*.log
+*.zip
+
+# Données PostgreSQL & builds supplémentaires
+pgdata/
+public/assets/
+*.zip
+
+# Données métier / exports / archives
+rapports/
+mnt/
+export/
+*.eml
+*.rar
+*.7z
+*.tar.gz
