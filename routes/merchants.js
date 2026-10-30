@@ -614,103 +614,164 @@ router.post('/resend-cahier', requireAuth, async (req, res) => {
 });
 
 // ── POST /api/merchants/force-production ─────────────────
-// Action F.PROD — Passage forcé en production (sous-marchand PAYFAC)
-router.post('/force-production', requireAuth, async (req, res) => {
+// Action F.PROD — Passage forcé en production
+// Disponible pour TOUS les marchands (avec ou sans PAYFAC)
+// Rôles autorisés : admin, supervisor
+router.post('/force-production', requireAuth, requireRole('admin','supervisor'), async (req, res) => {
   const { processingId, payfacId, toEmail, bankEmail, message } = req.body;
   if (!processingId) return res.status(400).json({ success:false, error:'processingId requis' });
-  if (!payfacId)     return res.status(400).json({ success:false, error:'Sélectionnez un PAYFAC' });
 
   const pgDb = require('../db/postgres');
 
-  // Charger le dossier
+  // ── Charger le dossier avec banque ───────────────────────
   const dossier = await pgDb.query(
-    `SELECT mt.*, b.email AS bank_email_auto, b.email_cc AS bank_email_cc_auto, b.name AS bank_name_auto
+    `SELECT mt.*, b.email AS bank_email_auto, b.email_cc AS bank_email_cc_auto,
+            b.name AS bank_name_auto
      FROM merchants_tracking mt
-     LEFT JOIN banks b ON SUBSTRING(mt.processing_id, 1, 2) = LPAD(b.code::text, 2, '0') AND b.actif=true
-     WHERE mt.processing_id=$1`, [processingId]
-  ).then(r=>r.rows[0]).catch(()=>null);
+     LEFT JOIN banks b ON SUBSTRING(mt.processing_id, 1, 2) = LPAD(b.code::text, 2, '0')
+       AND b.actif = true
+     WHERE mt.processing_id = $1`, [processingId]
+  ).then(r => r.rows[0]).catch(() => null);
 
   if (!dossier) return res.status(404).json({ success:false, error:'Dossier introuvable' });
 
-  // Charger le PAYFAC
-  const payfac = await pgDb.query(
-    `SELECT p.*, b.name AS bank_name, b.email AS bank_email_payfac
-     FROM payfacs p LEFT JOIN banks b ON p.bank_id=b.id WHERE p.id=$1`, [payfacId]
-  ).then(r=>r.rows[0]).catch(()=>null);
-
-  if (!payfac) return res.status(404).json({ success:false, error:'PAYFAC introuvable' });
-
-  // Construire les destinataires
-  const to      = toEmail || dossier.email_contact;
-  const bankCc  = bankEmail || dossier.bank_email_auto || payfac.bank_email_payfac;
-  // Inclure les emails CC supplémentaires de la banque
-  const bankCcExtras = (dossier.bank_email_cc_auto || '')
-    .split(';').map(e => e.trim()).filter(Boolean);
-  const ccFinal = [...getCcList(), bankCc, ...bankCcExtras]
-    .filter((v, i, a) => v && a.indexOf(v) === i);
+  // ── Charger le PAYFAC si fourni (optionnel) ──────────────
+  let payfac = null;
+  if (payfacId) {
+    payfac = await pgDb.query(
+      `SELECT p.*, b.name AS bank_name, b.email AS bank_email_payfac, b.email_cc AS bank_email_cc_payfac
+       FROM payfacs p LEFT JOIN banks b ON p.bank_id = b.id WHERE p.id = $1`, [payfacId]
+    ).then(r => r.rows[0]).catch(() => null);
+  }
 
   // ── Générer les credentials PRODUCTION ──────────────────
-  const now        = new Date();
-  const refDate    = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-  const refRandom  = Math.random().toString(36).substring(2,6).toUpperCase();
-  const trackingRef= `CTP-PROD-${refDate}-${processingId.slice(-4).toUpperCase()}-${refRandom}`;
-  const apiUser    = (dossier.terminal_id && dossier.terminal_id.trim()) ? dossier.terminal_id.trim() : processingId;
-  const monitorUser= `${apiUser}_OP`;
-  const apiPwd     = generateProdPassword();
-  const monitorPwd = generateProdPassword();
-  const apiUrl        = process.env.CTP_PROD_API_URL        || 'https://clictopay.com/payment/rest';
-  const monitoringUrl = process.env.CTP_PROD_MONITORING_URL || 'https://clictopay.com/epg_gui/';
+  const now         = new Date();
+  const refDate     = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  const refRandom   = Math.random().toString(36).substring(2,6).toUpperCase();
+  const trackingRef = `CTP-PROD-${refDate}-${processingId.slice(-4).toUpperCase()}-${refRandom}`;
+  const apiUser     = (dossier.terminal_id && dossier.terminal_id.trim()) ? dossier.terminal_id.trim() : processingId;
+  const monitorUser = `${apiUser}_OP`;
+  const apiPwd      = generateProdPassword();
+  const monitorPwd  = generateProdPassword();
+  const apiUrl         = process.env.CTP_PROD_API_URL        || 'https://clictopay.com/payment/rest';
+  const monitoringUrl  = process.env.CTP_PROD_MONITORING_URL || 'https://clictopay.com/epg_gui/';
 
   const creds = { trackingRef, apiUser, apiPwd, monitorUser, monitorPwd, apiUrl, monitoringUrl };
 
-  const _rawSiteUrl = dossier.site_url || dossier.site_web || '';
+  const _rawSiteUrl    = dossier.site_url || dossier.site_web || '';
   const siteUrlResolved = (_rawSiteUrl && !_rawSiteUrl.includes('@')) ? _rawSiteUrl : '—';
 
   const merchantInfo = {
-    raisonSociale: dossier.raison_sociale,
+    raisonSociale : dossier.raison_sociale,
     processingId,
-    terminalId   : dossier.terminal_id || '—',
-    siteUrl      : siteUrlResolved,
+    terminalId    : dossier.terminal_id || '—',
+    siteUrl       : siteUrlResolved,
   };
 
-  // ── Email 1 : Demande banque (F.PROD) ───────────────────
-  const subjectBank = `[ClicToPay] Passage en production — ${dossier.raison_sociale} — PAYFAC: ${payfac.nom}`;
+  // ── Construire la liste CC commune ──────────────────────
+  const bankEmailTo  = bankEmail || dossier.bank_email_auto
+                    || payfac?.bank_email_payfac || null;
+  const bankCcExtras = [
+    ...(dossier.bank_email_cc_auto  || '').split(';'),
+    ...(payfac?.bank_email_cc_payfac || '').split(';'),
+  ].map(e => e.trim()).filter(Boolean);
+  const ccBase = [...getCcList(), ...bankCcExtras]
+    .filter((v, i, a) => v && a.indexOf(v) === i);
+
+  // ── Email 1 : Notification banque ───────────────────────
+  // Envoyé à la banque (bankEmailTo) — informer du passage en production
+  const bankName    = dossier.bank_name_auto || payfac?.bank_name || '—';
+  const subjectBank = `[ClicToPay] Passage en production — ${dossier.raison_sociale}${payfac ? ` — PAYFAC: ${payfac.nom}` : ''}`;
   const htmlBank    = buildForceProdEmail({
     processingId,
     merchantName : dossier.raison_sociale,
     terminalId   : dossier.terminal_id || '—',
     siteUrl      : siteUrlResolved,
-    payfac,
+    payfac       : payfac || { nom: '—', bank_name: bankName },
     message      : message || '',
-    bankName     : dossier.bank_name_auto || payfac.bank_name || '—',
+    bankName,
   });
 
   // ── Email 2 : Credentials PRODUCTION au marchand ────────
+  // Envoyé au marchand — contient les paramètres API PROD
+  const to          = toEmail || dossier.email_contact;
   const subjectProd = `[ClicToPay · ${trackingRef}] Passage en production — ${dossier.raison_sociale}`;
   const htmlProd    = buildProdCredentialsEmail(merchantInfo, creds);
 
   try {
-    // Envoyer les deux emails
-    await Promise.all([
-      sendMail({ to, cc: ccFinal, subject: subjectBank, html: htmlBank }),
-      sendMail({ to, cc: ccFinal, subject: subjectProd, html: htmlProd }),
-    ]);
+    const emailPromises = [];
 
-    // Mettre à jour le statut
+    // Email banque — si on a un destinataire banque
+    if (bankEmailTo) {
+      emailPromises.push(
+        sendMail({ to: bankEmailTo, cc: ccBase, subject: subjectBank, html: htmlBank })
+          .then(() => console.log(`🏦 F.PROD email banque → ${bankEmailTo}`))
+      );
+    }
+
+    // Email marchand — toujours envoyé
+    emailPromises.push(
+      sendMail({ to, cc: ccBase, subject: subjectProd, html: htmlProd })
+        .then(() => console.log(`📧 F.PROD email marchand → ${to}`))
+    );
+
+    await Promise.all(emailPromises);
+
+    // ── Sync Oracle PROD ─────────────────────────────────
+    // Tenter la sync Oracle PROD (oracle_prod = true)
+    try {
+      const oracledb = require('oracledb');
+      const oConn    = await oracledb.getConnection('merchants_prod');
+      try {
+        // Vérifier présence dans Oracle PROD
+        const r = await oConn.execute(
+          `SELECT COUNT(*) FROM BPCMERCHANTDETAILS WHERE PROCESSINGID = :pid`,
+          { pid: processingId }
+        );
+        const inProd = (r.rows[0][0] > 0);
+        await pgDb.query(
+          `UPDATE merchants_tracking SET oracle_prod = $1 WHERE processing_id = $2`,
+          [inProd, processingId]
+        );
+        console.log(`[F.PROD] Oracle PROD sync : ${processingId} → oracle_prod=${inProd}`);
+      } finally {
+        await oConn.close();
+      }
+    } catch(oErr) {
+      console.warn(`[F.PROD] Oracle PROD sync ignorée : ${oErr.message}`);
+    }
+
+    // ── Mettre à jour le statut → en_production ──────────
     await pgDb.query(
       `UPDATE merchants_tracking
-       SET statut='banque_notifiee', date_notif_banque=NOW(),
-           tracking_ref_prod=$1
-       WHERE processing_id=$2`,
+       SET statut              = 'en_production',
+           date_production     = NOW(),
+           date_notif_banque   = COALESCE(date_notif_banque, NOW()),
+           tracking_ref_prod   = $1
+       WHERE processing_id = $2`,
       [trackingRef, processingId]
-    ).catch(()=>{});
+    );
 
     await logAction(req, 'FORCE_PRODUCTION', `merchant:${processingId}`, {
-      payfac: payfac.nom, bankCc, trackingRef
+      payfac    : payfac?.nom || 'sans PAYFAC',
+      bankEmailTo,
+      merchantTo: to,
+      trackingRef,
+      statut    : 'en_production',
     });
-    console.log(`🚀 F.PROD → ${to} | PAYFAC: ${payfac.nom} | Réf: ${trackingRef} | CC: ${ccFinal.join(', ')}`);
-    res.json({ success:true, sentTo:to, cc:ccFinal, payfac:payfac.nom, trackingRef });
+
+    console.log(`🚀 F.PROD OK — ${processingId} | Réf: ${trackingRef} | Marchand: ${to} | Banque: ${bankEmailTo || '—'}`);
+    res.json({
+      success   : true,
+      sentTo    : to,
+      bankSentTo: bankEmailTo || null,
+      cc        : ccBase,
+      payfac    : payfac?.nom || null,
+      trackingRef,
+      statut    : 'en_production',
+    });
   } catch(e) {
+    console.error('[F.PROD]', e.message);
     res.status(500).json({ success:false, error:e.message });
   }
 });

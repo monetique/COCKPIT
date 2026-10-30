@@ -1,29 +1,33 @@
 {
   "name": "clictopay-monitoring-v2",
-  "version": "2.0.0",
-  "description": "ClicToPay Monitoring Dashboard \u2014 Backend API REST + PostgreSQL",
+  "version": "2.1.0",
+  "description": "ClicToPay Monitoring Dashboard — Backend API REST + PostgreSQL",
   "main": "server-v2.js",
   "scripts": {
     "start": "node server-v2.js",
     "dev": "nodemon server-v2.js",
     "db:init": "psql -U $PG_USER -d $PG_DATABASE -f schema.sql",
     "db:seed-pwd": "node scripts/seed-admin.js",
-    "test": "echo 'Tests \u00e0 impl\u00e9menter'"
+    "test": "echo 'Tests à implémenter'"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "bcrypt": "^5.1.1",
+    "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.3",
-    "oracledb": "^6.4.0",
-    "mssql": "^10.0.4",
-    "nodemailer": "^6.9.9",
-    "multer": "^1.4.5-lts.1",
     "jszip": "^3.10.1",
+    "mssql": "^10.0.4",
+    "multer": "^1.4.5-lts.1",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^6.9.9",
+    "oracledb": "^6.4.0",
+    "papaparse": "^5.7.0",
+    "pdfkit": "^0.15.0",
+    "pg": "^8.11.3",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1"
+    "winston-daily-rotate-file": "^4.7.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

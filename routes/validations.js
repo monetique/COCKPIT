@@ -7,6 +7,12 @@ const { logAction } = require('../middleware/audit');
 
 // GET /api/validations — historique des validations
 router.get('/', requireAuth, async (req, res) => {
+  const { bankFilter } = require('../middleware/banquier');
+  // Appliquer le filtre banque inline
+  const user = req.user;
+  const bankCode = (user?.role === 'banquier' && user?.bank_code)
+    ? user.bank_code.padStart(2, '0') : null;
+
   const { processing_id, verdict, limit = 50, offset = 0 } = req.query;
   try {
     let sql    = `SELECT id, processing_id, raison_sociale, terminal_id, email_marchand,
@@ -16,18 +22,18 @@ router.get('/', requireAuth, async (req, res) => {
                          prod_email_envoye_at, created_at
                   FROM validations WHERE 1=1`;
     const params = [];
+    if (bankCode)      { params.push(bankCode);      sql += ` AND SUBSTRING(processing_id, 1, 2) = $${params.length}`; }
     if (processing_id) { params.push(processing_id); sql += ` AND processing_id = $${params.length}`; }
     if (verdict)       { params.push(verdict);        sql += ` AND verdict = $${params.length}`; }
     sql += ` ORDER BY created_at DESC LIMIT $${params.length+1} OFFSET $${params.length+2}`;
     params.push(parseInt(limit), parseInt(offset));
 
     const result  = await query(sql, params);
-    const countR  = await query(
-      `SELECT COUNT(*) FROM validations WHERE 1=1
+    const countSql = `SELECT COUNT(*) FROM validations WHERE 1=1
+       ${bankCode       ? `AND SUBSTRING(processing_id, 1, 2) = '${bankCode}'` : ''}
        ${processing_id ? `AND processing_id = '${processing_id}'` : ''}
-       ${verdict       ? `AND verdict = '${verdict}'`              : ''}`,
-      []
-    );
+       ${verdict       ? `AND verdict = '${verdict}'`              : ''}`;
+    const countR  = await query(countSql, []);
     res.json({
       success: true,
       validations: result.rows,
@@ -52,6 +58,13 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 // POST /api/validations — enregistrer une nouvelle validation
 router.post('/', requireAuth, async (req, res) => {
+  // Banquier sans permission can_upload_cahier → refusé
+  if (req.user?.role === 'banquier') {
+    const perms = req.user?.permissions || {};
+    if (!perms.can_upload_cahier && !perms.can_validate) {
+      return res.status(403).json({ success: false, error: 'Permission insuffisante — upload de cahier non autorisé' });
+    }
+  }
   const {
     processing_id, raison_sociale, terminal_id, email_marchand, filename,
     verdict, total_cas, cas_reussis, cas_echoues, cas_en_attente,
@@ -311,7 +324,28 @@ router.post('/auto-run', requireAuth, async (req, res) => {
 
   const https = require('https');
   const agent = new https.Agent({ rejectUnauthorized: false });
-  const fetch = (...args) => import('node-fetch').then(m => m.default(...args));
+  // Helper HTTP natif avec timeout
+  async function fetchWithTimeout(url, opts = {}) {
+    const { timeout = 20000, agent, method = 'GET', headers, body } = opts;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    try {
+      const r = await require('node:https').requestAsync
+        ? require('node:https').requestAsync(url, { signal: controller.signal, agent, method, headers })
+        : await (async () => {
+            const https = require('https');
+            return new Promise((resolve, reject) => {
+              const u = new URL(url);
+              const req = https.request({ hostname: u.hostname, path: u.pathname + u.search, method, headers, agent, rejectUnauthorized: false }, resolve);
+              req.on('error', reject);
+              req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+              req.setTimeout(timeout);
+              if (body) req.write(body);
+              req.end();
+            });
+          })();
+    } finally { clearTimeout(timer); }
+  }
 
   // ── Helper appel API ──────────────────────────────────
   async function ctpPost(endpoint, params) {
@@ -689,6 +723,266 @@ router.post('/auto-run', requireAuth, async (req, res) => {
     cases   : results,
     summary : { pass, fail, ignored, manual: 1, total: results.length },
   });
+});
+
+// ══════════════════════════════════════════════════════════
+// POST /api/validations/:id/send-rapport
+// Génère un rapport PDF + email HTML et envoie au marchand et à la banque
+// ══════════════════════════════════════════════════════════
+router.post('/:id/send-rapport', requireAuth, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // ── Charger la validation ──────────────────────────
+    const valRes = await query('SELECT * FROM validations WHERE id = $1', [id]);
+    const val    = valRes.rows[0];
+    if (!val) return res.status(404).json({ success: false, error: 'Validation introuvable' });
+
+    const pid = val.processing_id;
+
+    // ── Charger le dossier marchand ────────────────────
+    const dossierRes = await query(
+      `SELECT mt.*, b.email AS bank_email, b.email_cc AS bank_email_cc, b.name AS bank_name
+       FROM merchants_tracking mt
+       LEFT JOIN banks b ON LPAD(b.code::text,2,'0') = SUBSTRING(mt.processing_id,1,2) AND b.actif=true
+       WHERE mt.processing_id = $1`, [pid]
+    );
+    const dossier = dossierRes.rows[0];
+    if (!dossier) return res.status(404).json({ success: false, error: 'Dossier marchand introuvable' });
+
+    // ── Parser les cas de test ─────────────────────────
+    let cases = [];
+    try { cases = Array.isArray(val.cases_json) ? val.cases_json : JSON.parse(JSON.stringify(val.cases_json || [])); } catch(_) {}
+
+    // ── Générer le PDF ─────────────────────────────────
+    const PDFDocument = require('pdfkit');
+    const { PassThrough } = require('stream');
+
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      const doc    = new PDFDocument({ size: 'A4', margin: 40 });
+      const chunks = [];
+      const stream = new PassThrough();
+      doc.pipe(stream);
+      stream.on('data', c => chunks.push(c));
+      stream.on('end',  () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+
+      const NAVY  = '#0f2444';
+      const GREEN = '#15803d';
+      const RED   = '#dc2626';
+      const GRAY  = '#475569';
+      const now   = new Date();
+
+      // En-tête
+      doc.rect(0, 0, doc.page.width, 80).fill(NAVY);
+      doc.fillColor('white').fontSize(18).font('Helvetica-Bold')
+         .text('ClicToPay', 40, 20);
+      doc.fontSize(11).font('Helvetica')
+         .text('Rapport de validation — Cahier des recettes', 40, 44);
+      doc.fillColor(GRAY).fontSize(9)
+         .text(`Généré le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR')}`,
+               doc.page.width - 200, 58, { width: 160, align: 'right' });
+
+      // Infos marchand
+      doc.moveDown(3);
+      doc.fillColor(NAVY).fontSize(12).font('Helvetica-Bold').text('Informations marchand');
+      doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#e2e8f0').stroke();
+      doc.moveDown(0.5);
+
+      const info = [
+        ['Raison sociale',  val.raison_sociale || dossier.raison_sociale],
+        ['Processing ID',   pid],
+        ['Terminal ID',     val.terminal_id || dossier.terminal_id || '—'],
+        ['Email marchand',  val.email_marchand || dossier.email_contact || '—'],
+        ['Référence',       val.filename || '—'],
+      ];
+      info.forEach(([k, v]) => {
+        doc.fillColor(GRAY).fontSize(9).font('Helvetica-Bold').text(k + ' :', 40, doc.y, { continued: true, width: 140 });
+        doc.font('Helvetica').fillColor('#1e293b').text(' ' + v);
+      });
+
+      // Verdict global
+      doc.moveDown(1);
+      const verdictColor  = val.verdict === 'approved' ? GREEN : val.verdict === 'refused' ? RED : '#f59e0b';
+      const verdictLabel  = val.verdict === 'approved' ? '✓ APPROUVÉ' : val.verdict === 'refused' ? '✗ REFUSÉ' : '⏳ EN ATTENTE';
+      doc.rect(40, doc.y, doc.page.width - 80, 36).fill(verdictColor + '15');
+      doc.fillColor(verdictColor).fontSize(13).font('Helvetica-Bold')
+         .text(verdictLabel, 50, doc.y - 28);
+      doc.fillColor(GRAY).fontSize(9).font('Helvetica')
+         .text(`${val.cas_reussis || 0}/${val.total_cas || 0} cas réussis · Taux : ${val.taux_reussite || 0}%`, 50, doc.y - 14);
+
+      // Tableau des cas
+      doc.moveDown(2);
+      doc.fillColor(NAVY).fontSize(12).font('Helvetica-Bold').text('Résultats par cas de test');
+      doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#e2e8f0').stroke();
+      doc.moveDown(0.5);
+
+      const CW = [55, 160, 70, 220];
+      const headers = ['ID', 'Cas de test', 'Verdict', 'Erreurs / Remarques'];
+      let x = 40;
+
+      // Header tableau
+      doc.rect(40, doc.y, doc.page.width - 80, 18).fill('#f1f5f9');
+      headers.forEach((h, i) => {
+        doc.fillColor(NAVY).fontSize(8).font('Helvetica-Bold').text(h, x + 4, doc.y - 14, { width: CW[i] - 6 });
+        x += CW[i];
+      });
+      doc.moveDown(0.5);
+
+      // Lignes
+      const CTP_NAMES = {
+        'CTP-01': 'Enregistrement commande',
+        'CTP-02': 'Redirection paiement',
+        'CTP-03': 'Paiement accepté (4509)',
+        'CTP-04': 'Paiement refusé (5104)',
+        'CTP-05': 'Statut returnUrl',
+        'CTP-06': 'Paramètres manquants',
+        'CTP-07': 'Doublon orderNumber',
+        'CTP-08': 'orderId inexistant',
+      };
+
+      cases.forEach((c, idx) => {
+        const rowY  = doc.y;
+        const rowH  = Math.max(18, (c.errors?.length || 0) * 10 + 12);
+        if (idx % 2 === 0) doc.rect(40, rowY, doc.page.width - 80, rowH).fill('#f8fafc');
+
+        const vColor = c.verdict === 'pass' ? GREEN : c.verdict === 'fail' ? RED : '#f59e0b';
+        const vLabel = c.verdict === 'pass' ? '✓ Réussi' : c.verdict === 'fail' ? '✗ Échoué' : '— En attente';
+
+        x = 40;
+        doc.fillColor(NAVY).fontSize(8).font('Helvetica-Bold').text(c.tcId || '—', x + 4, rowY + 4, { width: CW[0] - 6 }); x += CW[0];
+        doc.font('Helvetica').fillColor('#334155').text(CTP_NAMES[c.tcId] || c.tcId, x + 4, rowY + 4, { width: CW[1] - 6 }); x += CW[1];
+        doc.fillColor(vColor).font('Helvetica-Bold').text(vLabel, x + 4, rowY + 4, { width: CW[2] - 6 }); x += CW[2];
+
+        const errText = (c.errors || []).join(' · ') || '—';
+        doc.fillColor(c.errors?.length ? RED : GRAY).font('Helvetica').fontSize(7)
+           .text(errText, x + 4, rowY + 4, { width: CW[3] - 6 });
+
+        doc.y = rowY + rowH;
+      });
+
+      // Recommandations si refusé
+      if (val.verdict !== 'approved') {
+        doc.moveDown(1.5);
+        doc.rect(40, doc.y, doc.page.width - 80, 14).fill('#fef2f2');
+        doc.fillColor(RED).fontSize(9).font('Helvetica-Bold')
+           .text('Actions requises', 50, doc.y - 10);
+        doc.moveDown(0.8);
+        doc.fillColor(GRAY).fontSize(8).font('Helvetica')
+           .text('Veuillez corriger les cas en échec et soumettre un nouveau cahier des recettes.', 50, doc.y, { width: doc.page.width - 100 });
+        doc.moveDown(0.3);
+        doc.text('Pour toute question : webmaster@clictopay.com', 50, doc.y);
+      }
+
+      // Pied de page
+      doc.fontSize(7).fillColor('#94a3b8')
+         .text('ClicToPay — Document confidentiel', 40, doc.page.height - 40, { align: 'center', width: doc.page.width - 80 });
+
+      doc.end();
+    });
+
+    // ── Construire l'email HTML ────────────────────────
+    const { sendMail, getCcList } = require('../config/mailer');
+
+    const verdictLabel = val.verdict === 'approved' ? '✅ APPROUVÉ' : val.verdict === 'refused' ? '❌ REFUSÉ' : '⏳ EN ATTENTE';
+    const verdictColor = val.verdict === 'approved' ? '#15803d' : val.verdict === 'refused' ? '#dc2626' : '#d97706';
+
+    const casRows = cases.map(c => {
+      const vColor = c.verdict === 'pass' ? '#15803d' : c.verdict === 'fail' ? '#dc2626' : '#d97706';
+      const vLabel = c.verdict === 'pass' ? '✓ Réussi' : c.verdict === 'fail' ? '✗ Échoué' : '— En attente';
+      const errs   = (c.errors || []).map(e => `<li style="color:#dc2626;font-size:11px;">${e}</li>`).join('');
+      return `<tr style="background:${cases.indexOf(c)%2===0?'#f8fafc':'white'}">
+        <td style="padding:6px 8px;font-family:monospace;font-size:12px;font-weight:600;color:#0f2444;">${c.tcId}</td>
+        <td style="padding:6px 8px;font-size:12px;color:#334155;">${c.name || c.tcId}</td>
+        <td style="padding:6px 8px;font-size:12px;font-weight:600;color:${vColor};">${vLabel}</td>
+        <td style="padding:6px 8px;font-size:11px;">${errs ? `<ul style="margin:0;padding-left:14px;">${errs}</ul>` : '<span style="color:#94a3b8">—</span>'}</td>
+      </tr>`;
+    }).join('');
+
+    const htmlBody = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif;">
+<div style="max-width:700px;margin:0 auto;padding:24px 0;">
+  <div style="background:#0f2444;padding:24px 32px;border-radius:12px 12px 0 0;">
+    <div style="font-size:22px;font-weight:700;color:white;">ClicToPay</div>
+    <div style="font-size:13px;color:#94a3b8;margin-top:4px;">Rapport de validation — Cahier des recettes</div>
+  </div>
+  <div style="background:white;padding:24px 32px;border:1px solid #e2e8f0;">
+    <p style="font-size:13px;color:#475569;">Bonjour,</p>
+    <p style="font-size:13px;color:#475569;">Veuillez trouver ci-dessous le rapport de validation du cahier des recettes pour le marchand <strong>${val.raison_sociale || pid}</strong>.</p>
+
+    <div style="background:${verdictColor}15;border-left:4px solid ${verdictColor};padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;">
+      <div style="font-size:16px;font-weight:700;color:${verdictColor};">${verdictLabel}</div>
+      <div style="font-size:12px;color:#475569;margin-top:4px;">${val.cas_reussis || 0}/${val.total_cas || 0} cas réussis · Taux de réussite : ${val.taux_reussite || 0}%</div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">ID</th>
+          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">Cas de test</th>
+          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">Verdict</th>
+          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;border-bottom:1px solid #e2e8f0;">Erreurs</th>
+        </tr>
+      </thead>
+      <tbody>${casRows}</tbody>
+    </table>
+
+    ${val.verdict !== 'approved' ? `
+    <div style="background:#fef2f2;border:1px solid #fecaca;padding:12px 16px;border-radius:8px;margin-top:16px;">
+      <div style="font-size:12px;font-weight:600;color:#dc2626;margin-bottom:4px;">Actions requises</div>
+      <div style="font-size:12px;color:#475569;">Veuillez corriger les cas en échec et soumettre un nouveau cahier des recettes à l'équipe ClicToPay.</div>
+    </div>` : `
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px 16px;border-radius:8px;margin-top:16px;">
+      <div style="font-size:12px;font-weight:600;color:#15803d;">Félicitations !</div>
+      <div style="font-size:12px;color:#475569;">Tous les tests sont validés. Votre intégration est conforme aux spécifications ClicToPay.</div>
+    </div>`}
+  </div>
+  <div style="background:#f8fafc;padding:16px 32px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;text-align:center;">
+    <div style="font-size:11px;color:#94a3b8;">ClicToPay — Document confidentiel · webmaster@clictopay.com</div>
+  </div>
+</div></body></html>`;
+
+    // ── Envoyer les emails ─────────────────────────────
+    const subject = `[ClicToPay] Rapport de validation — ${val.raison_sociale || pid} — ${verdictLabel}`;
+    const ccList  = getCcList();
+
+    // CC banque
+    const bankCc = [];
+    if (dossier.bank_email)    bankCc.push(dossier.bank_email);
+    if (dossier.bank_email_cc) {
+      dossier.bank_email_cc.split(';').map(e => e.trim()).filter(Boolean).forEach(e => bankCc.push(e));
+    }
+
+    const toMarchand = val.email_marchand || dossier.email_contact;
+    const ccFinal    = [...ccList, ...bankCc].filter((v,i,a) => v && a.indexOf(v) === i);
+
+    await sendMail({
+      to         : toMarchand,
+      cc         : ccFinal,
+      subject,
+      html       : htmlBody,
+      attachments: [{
+        filename   : `Rapport_Validation_${pid}_${new Date().toISOString().slice(0,10)}.pdf`,
+        content    : pdfBuffer,
+        contentType: 'application/pdf',
+      }],
+    });
+
+    // ── Marquer rapport envoyé en base ─────────────────
+    await query(
+      `UPDATE validations SET rapport_envoye_at = NOW() WHERE id = $1`, [id]
+    ).catch(() => {}); // Ignorer si colonne absente
+
+    await logAction(req, 'RAPPORT_VALIDATION_ENVOYE', `validation:${id}`, {
+      pid, verdict: val.verdict, sentTo: toMarchand, cc: ccFinal,
+    });
+
+    console.log(`📋 Rapport validation envoyé → ${toMarchand} | CC: ${ccFinal.join(', ')} | Verdict: ${val.verdict}`);
+    res.json({ success: true, sentTo: toMarchand, cc: ccFinal, verdict: val.verdict });
+
+  } catch(e) {
+    console.error('[send-rapport]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 module.exports = router;

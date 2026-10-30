@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui';
 import { resendCahier, forceProduction, resetProgression, getPayfacs } from '@/api/payfacs';
 import { getBanks } from '@/api/banks';
 import client from '@/api/client';
+import useAuthStore from '@/store/authStore';
 
 // ── Suppression depuis l'API tracking ────────────────────
 // Route : DELETE /api/tracking/:processing_id
@@ -16,6 +17,8 @@ const deleteTracking = (processingId) =>
   client.delete(`/tracking/${processingId}`);
 
 export default function ActionButtons({ merchant, onDone }) {
+  const { user } = useAuthStore();
+  const isAdminOrSupervisor = ['admin','supervisor'].includes(user?.role);
   const [modal,   setModal]   = useState(null); // 'fprod' | 'delete'
   const [loading, setLoading] = useState(null);
 
@@ -102,12 +105,14 @@ export default function ActionButtons({ merchant, onDone }) {
           </button>
         )}
 
-        {/* F.PROD */}
+        {/* F.PROD — admin/supervisor uniquement */}
+        {isAdminOrSupervisor && (
         <button onClick={() => setModal('fprod')}
-          title="Passage forcé en production (PAYFAC)"
+          title="Passage forcé en production"
           className="btn-ghost btn-sm text-xs text-success hover:bg-success-dim px-2">
           F.PROD
         </button>
+        )}
 
         {/* RESET */}
         <button onClick={handleReset} disabled={loading === 'reset'}
@@ -229,7 +234,6 @@ function ForceProdModal({ merchant, onClose, onDone }) {
   })();
 
   const handleConfirm = async () => {
-    if (!payfacId) { toast.error('Sélectionnez un PAYFAC'); return; }
     setSending(true);
     try {
       const { data } = await forceProduction({
@@ -240,7 +244,7 @@ function ForceProdModal({ merchant, onClose, onDone }) {
         message,
       });
       toast.success(
-        `🚀 Passage en production → ${data.sentTo}\nPAYFAC: ${data.payfac} | Réf: ${data.trackingRef}\n📧 2 emails envoyés`,
+        `🚀 Passage en production → ${data.sentTo}${data.payfac ? " | PAYFAC: "+data.payfac : ""} | Réf: ${data.trackingRef}\n📧 2 emails envoyés`,
         { duration: 7000 }
       );
       onDone();
@@ -257,7 +261,7 @@ function ForceProdModal({ merchant, onClose, onDone }) {
       <div className="bg-surface border border-border2 rounded-xl w-full max-w-xl shadow-2xl animate-slide-up max-h-[90vh] overflow-y-auto">
 
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <div className="text-sm font-semibold text-primary">🚀 Passage forcé en production — PAYFAC</div>
+          <div className="text-sm font-semibold text-primary">🚀 Passage forcé en production</div>
           <button onClick={onClose} className="text-tertiary hover:text-primary"><X size={16}/></button>
         </div>
 
@@ -285,7 +289,7 @@ function ForceProdModal({ merchant, onClose, onDone }) {
               {/* PAYFAC */}
               <div>
                 <label className="block text-xs font-medium text-secondary mb-1.5">
-                  PAYFAC * <span className="text-tertiary ml-1">(sous-marchand de)</span>
+                  PAYFAC <span className="text-tertiary ml-1">(optionnel — sous-marchand)</span>
                 </label>
                 <select value={payfacId} onChange={e => setPayfacId(e.target.value)} className="input">
                   <option value="">— Sélectionner un PAYFAC —</option>
@@ -322,7 +326,7 @@ function ForceProdModal({ merchant, onClose, onDone }) {
             </div>
             <div className="flex justify-end gap-2 px-6 py-4 border-t border-border">
               <button onClick={onClose} className="btn-ghost btn-sm">Annuler</button>
-              <button onClick={() => payfacId ? setStep(2) : toast.error('Sélectionnez un PAYFAC')}
+              <button onClick={() => setStep(2)}
                 className="btn-primary btn-sm">Suivant →</button>
             </div>
           </>

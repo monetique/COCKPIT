@@ -9,7 +9,8 @@ LABEL description="SMT COCKPIT v2 — ClicToPay Monitoring Dashboard"
 WORKDIR /app
 
 # ── Dépendances système ───────────────────────────────────
-RUN apk add --no-cache libaio libnsl libc6-compat python3 make g++
+RUN apk add --no-cache libaio libnsl libc6-compat python3 py3-pip make g++ \
+    && pip3 install reportlab --break-system-packages --quiet
 
 # ── Backend : dépendances ─────────────────────────────────
 COPY package*.json ./
@@ -32,6 +33,8 @@ COPY *.sql          ./
 COPY CahierDesRecettes_TEMPLATE.xlsx ./
 COPY Manuel_Integration_ClicToPay_v1.0.pdf ./
 COPY frontend/      ./frontend/
+COPY schedulers/    ./schedulers/
+COPY scripts/       ./scripts/
 
 # ── Build React ───────────────────────────────────────────
 RUN cd frontend && npm run build
@@ -41,7 +44,7 @@ RUN mkdir -p logs cahiers_outbox migration_exports
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
   CMD wget -qO- http://localhost:3000/api/health || exit 1
 
 CMD ["node", "--max-old-space-size=512", "server-v2.js"]

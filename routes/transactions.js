@@ -230,7 +230,7 @@ router.get('/states-count', requireAuth, async (req, res) => {
 router.post('/stats', requireAuth, async (req, res) => {
   const { w, b } = buildWhere(req.body);
 
-  const sql = `
+  const sqlStats = `
       SELECT
         COUNT(*)  AS TOTAL,
         NVL(SUM(CASE WHEN TRIM(PAYMENT_STATE) = 'payment_deposited' THEN 1 ELSE 0 END), 0) AS DEPOSITED,
@@ -246,8 +246,31 @@ router.post('/stats', requireAuth, async (req, res) => {
       INNER JOIN BPCMERCHANTDETAILS M ON T.MERCHANT_ID = M.ID
       ${w}`.trim();
 
-  // Reconstituer la requête lisible avec les valeurs des bind variables
-  let sqlDisplay = sql;
+  const sqlActionCodes = `
+      SELECT T.ACTION_CODE_INT AS CODE,
+             TO_CHAR(T.ACTION_CODE_INT) AS LABEL,
+             COUNT(*) AS CNT
+      FROM BPCTRANSACTIONS T
+      INNER JOIN BPCMERCHANTDETAILS M ON T.MERCHANT_ID = M.ID
+      ${w}
+        AND T.ACTION_CODE_INT IS NOT NULL
+        AND T.ACTION_CODE_INT <> 0
+      GROUP BY T.ACTION_CODE_INT
+      ORDER BY CNT DESC
+      FETCH FIRST 8 ROWS ONLY`.trim();
+
+  const sqlMerchants = `
+      SELECT NVL(M.MERCHANTFULLNAME, T.PROCESSING_ID) AS NAME,
+             COUNT(*) AS CNT
+      FROM BPCTRANSACTIONS T
+      INNER JOIN BPCMERCHANTDETAILS M ON T.MERCHANT_ID = M.ID
+      ${w}
+      GROUP BY NVL(M.MERCHANTFULLNAME, T.PROCESSING_ID)
+      ORDER BY CNT DESC
+      FETCH FIRST 8 ROWS ONLY`.trim();
+
+  // Reconstituer la requête lisible
+  let sqlDisplay = sqlStats;
   Object.entries(b).forEach(([k, v]) => {
     sqlDisplay = sqlDisplay.replace(new RegExp(':' + k + '\\b', 'g'), `'${v}'`);
   });
@@ -260,21 +283,27 @@ router.post('/stats', requireAuth, async (req, res) => {
   let conn;
   try {
     conn = await getConn(req);
-    const r = await conn.execute(sql, b, { outFormat: oracledb.OUT_FORMAT_OBJECT });
-    const row = r.rows[0];
+    const [rStats, rAC, rMch] = await Promise.all([
+      conn.execute(sqlStats, b, { outFormat: oracledb.OUT_FORMAT_OBJECT }),
+      conn.execute(sqlActionCodes, b, { outFormat: oracledb.OUT_FORMAT_OBJECT }).catch(() => ({ rows: [] })),
+      conn.execute(sqlMerchants,   b, { outFormat: oracledb.OUT_FORMAT_OBJECT }).catch(() => ({ rows: [] })),
+    ]);
+    const row = rStats.rows[0];
     res.json({
-      success    : true,
-      total      : row.TOTAL,
-      deposited  : row.DEPOSITED,   // payment_deposited
-      declined   : row.DECLINED,    // payment_declined
-      started    : row.STARTED,     // started
-      others     : row.OTHERS,      // payment_void + autres
-      totalAmount: row.TOTAL_AMOUNT,
-      avgAmount  : row.AVG_AMOUNT,
-      maxAmount  : row.MAX_AMOUNT,
-      minAmount  : row.MIN_AMOUNT,
-      _sql       : sqlDisplay,
-      _binds     : b,
+      success       : true,
+      total         : row.TOTAL,
+      deposited     : row.DEPOSITED,
+      declined      : row.DECLINED,
+      started       : row.STARTED,
+      others        : row.OTHERS,
+      totalAmount   : row.TOTAL_AMOUNT,
+      avgAmount     : row.AVG_AMOUNT,
+      maxAmount     : row.MAX_AMOUNT,
+      minAmount     : row.MIN_AMOUNT,
+      topActionCodes: rAC.rows.map(r => ({ code: r.CODE, label: r.LABEL, count: r.CNT })),
+      topMerchants  : rMch.rows.map(r => ({ name: r.NAME, count: r.CNT })),
+      _sql          : sqlDisplay,
+      _binds        : b,
     });
   } catch(e) {
     console.error('Erreur /transactions/stats:', e.message);

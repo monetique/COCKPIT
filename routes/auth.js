@@ -60,11 +60,13 @@ router.post('/login', async (req, res) => {
       accessToken,
       refreshToken,
       user: {
-        id    : user.id,
-        nom   : user.nom,
-        prenom: user.prenom,
-        email : user.email,
-        role  : user.role
+        id         : user.id,
+        nom        : user.nom,
+        prenom     : user.prenom,
+        email      : user.email,
+        role       : user.role,
+        bank_code  : user.bank_code   || null,
+        permissions: user.permissions || {},
       }
     });
   } catch (err) {
@@ -88,7 +90,8 @@ router.post('/refresh', async (req, res) => {
 
     const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
     const result = await query(
-      `SELECT rt.*, u.id as uid, u.nom, u.prenom, u.email, u.role, u.actif
+      `SELECT rt.*, u.id as uid, u.nom, u.prenom, u.email, u.role, u.actif,
+              u.bank_code, u.permissions
        FROM refresh_tokens rt
        JOIN users u ON rt.user_id = u.id
        WHERE rt.token_hash = $1 AND rt.revoked = false AND rt.expires_at > NOW()`,
@@ -101,8 +104,13 @@ router.post('/refresh', async (req, res) => {
     }
 
     const newAccessToken = generateAccessToken({
-      id: row.uid, nom: row.nom, prenom: row.prenom,
-      email: row.email, role: row.role
+      id         : row.uid,
+      nom        : row.nom,
+      prenom     : row.prenom,
+      email      : row.email,
+      role       : row.role,
+      bank_code  : row.bank_code   || null,
+      permissions: row.permissions || {},
     });
 
     res.json({ success: true, accessToken: newAccessToken });
@@ -183,7 +191,7 @@ router.get('/users', requireAuth, requireRole('admin'), async (req, res) => {
 
 // POST /api/auth/users — créer un utilisateur
 router.post('/users', requireAuth, requireRole('admin'), async (req, res) => {
-  const { nom, prenom, email, password, role } = req.body;
+  const { nom, prenom, email, password, role, bank_code, permissions } = req.body;
   if (!nom || !prenom || !email || !password) {
     return res.status(400).json({ success: false, error: 'Champs obligatoires manquants' });
   }
@@ -208,18 +216,22 @@ router.post('/users', requireAuth, requireRole('admin'), async (req, res) => {
 
 // PATCH /api/auth/users/:id — modifier un utilisateur
 router.patch('/users/:id', requireAuth, requireRole('admin'), async (req, res) => {
-  const { nom, prenom, email, role, actif } = req.body;
+  const { nom, prenom, email, role, actif, bank_code, permissions } = req.body;
   try {
     const result = await query(
       `UPDATE users SET
          nom    = COALESCE($1, nom),
          prenom = COALESCE($2, prenom),
          email  = COALESCE($3, email),
-         role   = COALESCE($4, role),
-         actif  = COALESCE($5, actif)
+         role        = COALESCE($4, role),
+         actif       = COALESCE($5, actif),
+         bank_code   = COALESCE($7, bank_code),
+         permissions = COALESCE($8::jsonb, permissions)
        WHERE id = $6
-       RETURNING id, nom, prenom, email, role, actif`,
-      [nom, prenom, email?.toLowerCase().trim(), role, actif, req.params.id]
+       RETURNING id, nom, prenom, email, role, actif, bank_code, permissions`,
+      [nom, prenom, email?.toLowerCase().trim(), role, actif, req.params.id,
+       bank_code !== undefined ? (bank_code || null) : undefined,
+       permissions !== undefined ? JSON.stringify(permissions) : undefined]
     );
     if (!result.rows[0]) return res.status(404).json({ success: false, error: 'Utilisateur introuvable' });
     await logAction(req, 'UPDATE_USER', `user:${req.params.id}`, req.body);

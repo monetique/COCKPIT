@@ -7,7 +7,7 @@ import clsx       from 'clsx';
 import {
   Upload, RefreshCw, Download, History,
   FileText, Bell, Landmark, Rocket, RotateCcw, FolderOpen,
-  Play, CheckCircle2, XCircle, Loader2, AlertCircle, Zap
+  Play, CheckCircle2, XCircle, Loader2, AlertCircle, Zap, Send
 } from 'lucide-react';
 
 import { SectionHeader, StatCard, Spinner, EmptyState, Skeleton } from '@/components/ui';
@@ -31,6 +31,7 @@ export default function ValidationPage() {
   const [dragging,      setDragging]      = useState(false);
   const [autoRunning,   setAutoRunning]   = useState(false);
   const [autoResults,   setAutoResults]   = useState(null);
+  const [sendingRapport, setSendingRapport] = useState(false);
   const [analyzing,     setAnalyzing]     = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [activeTab,     setActiveTab]     = useState('analyse'); // 'analyse' | 'history'
@@ -174,7 +175,7 @@ export default function ValidationPage() {
   // ── Exécution automatique des cas de test ────────────
   const handleAutoRun = async () => {
     if (!result?.merchant?.apiUser || !result?.merchant?.apiPwd) {
-      toast.error('Credentials API introuvables dans le cahier — vérifiez la feuille Informations');
+      toast.error('Credentials API introuvables dans le cahier');
       return;
     }
     setAutoRunning(true);
@@ -186,14 +187,31 @@ export default function ValidationPage() {
         apiUrl   : result.merchant.apiUrl || undefined,
       });
       setAutoResults(data);
-      toast.success(
-        `✅ ${data.summary.pass} réussi · ❌ ${data.summary.fail} échoué · 📋 1 manuel`,
-        { duration: 5000 }
-      );
+      toast.success(`✅ ${data.summary.pass} réussi · ❌ ${data.summary.fail} échoué`, { duration: 5000 });
     } catch(e) {
       toast.error(e.response?.data?.error || 'Erreur exécution automatique');
     } finally {
       setAutoRunning(false);
+    }
+  };
+
+  // ── Envoyer le rapport de validation ────────────────
+  const handleSendRapport = async () => {
+    if (!validationId) {
+      toast.error('Sauvegardez d\'abord la validation pour générer un rapport');
+      return;
+    }
+    setSendingRapport(true);
+    try {
+      const { data } = await client.post(`/validations/${validationId}/send-rapport`);
+      toast.success(
+        `📋 Rapport envoyé → ${data.sentTo}${data.cc?.length ? ` + ${data.cc.length} CC` : ''}`,
+        { duration: 5000 }
+      );
+    } catch(e) {
+      toast.error(e.response?.data?.error || 'Erreur envoi rapport');
+    } finally {
+      setSendingRapport(false);
     }
   };
 
@@ -304,6 +322,20 @@ export default function ValidationPage() {
                 {result.verdict !== 'approved' && !result.isBlankTemplate && (
                   <button onClick={() => setShowNotify(true)} className="btn-ghost btn-sm ml-auto">
                     <Bell size={13}/> Notifier marchand
+                  </button>
+                )}
+                {/* Rapport de validation — tous les verdicts */}
+                {!result.isBlankTemplate && validationId && (
+                  <button
+                    onClick={handleSendRapport}
+                    disabled={sendingRapport}
+                    title="Envoyer le rapport PDF de validation au marchand et à la banque"
+                    className={clsx(
+                      'btn-sm flex items-center gap-1.5',
+                      result.verdict === 'approved' ? 'btn-ghost' : 'btn-warning'
+                    )}>
+                    {sendingRapport ? <Loader2 size={13} className="animate-spin"/> : <Send size={13}/>}
+                    {sendingRapport ? 'Envoi…' : 'Rapport'}
                   </button>
                 )}
               </div>

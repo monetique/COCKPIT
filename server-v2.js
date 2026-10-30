@@ -134,7 +134,9 @@ async function initSqlServer() {
       port    : parseInt(process.env.MSSQL_PORT || '1433'),
       database: process.env.MSSQL_DATABASE || 'switchdb',
       options : { encrypt: false, trustServerCertificate: true, enableArithAbort: true, useUTC: false },
-      pool    : { max: 10, min: 2, idleTimeoutMillis: 30000 }
+      pool    : { max: 10, min: 2, idleTimeoutMillis: 30000 },
+      requestTimeout    : 120000,
+      connectionTimeout : 30000
     });
     console.log('✅ SQL Server PAYSMART connecté');
   } catch (err) { console.error('❌ SQL Server:', err.message); }
@@ -142,6 +144,10 @@ async function initSqlServer() {
 
 // Injecter les pools dans req pour les routes qui en ont besoin
 app.use((req, res, next) => {
+  // Bypass auth pour les appels internes du scheduler
+  if (req.headers['x-internal-scheduler'] === 'true') {
+    req.user = { id: 'scheduler', role: 'admin', email: 'scheduler@internal' };
+  }
   req.oraclePool        = oraclePool;
   req.merchantsProdPool = merchantsProdPool;
   req.merchantsTestPool = merchantsTestPool;
@@ -187,10 +193,20 @@ app.use('/api/acs',         require('./routes/acs'));
 app.use('/api/alerts',      require('./routes/alerts'));
 app.use('/api/sla',           require('./routes/sla'));
 app.use('/api/email-preview', require('./routes/email-preview'));
-app.use('/api/provision-uat', require('./routes/provision-uat'));
-app.use('/api/provision-uat', require('./routes/provision-uat'));
+app.use('/api/banques-dashboard', require('./routes/banques-dashboard'));
+app.use('/api/psm-facturation', require('./routes/psm_facturation'));
+app.use('/api/facturation-globale', require('./routes/facturation_globale'));
+app.use('/api/facturation', require('./routes/facturation'));
+app.use('/api/reconciliation', require('./routes/reconciliation'));
+app.use('/api/rapports', require('./routes/rapports'));
+app.use('/api/inscriptions',      require('./routes/inscriptions'));
+app.use('/api/provision-uat',     require('./routes/provision-uat'));
 app.use('/api/api-tokens',  require('./routes/api-tokens'));
 app.use('/api/payfacs',     require('./routes/payfacs'));
+const { router: versionRouter, registerVersion } = require('./routes/version');
+app.use('/api/users', require('./routes/users'));
+app.use('/api/kpi', require('./routes/kpi'));
+app.use('/api/version', versionRouter);
 app.use('/api/logs',        require('./routes/logs'));
 // API publique v1 — authentification par X-API-Key
 app.use('/api/v1/affiliates', require('./routes/v1-affiliates'));
@@ -296,6 +312,13 @@ if (fs.existsSync(distPath)) {
 
   setInterval(runRetry, INTERVAL_MS);
   console.log('[UAT Scheduler] ✅ Démarré — retry toutes les 2 minutes');
+
+  // Scheduler rapport inscriptions
+  try {
+    require('./schedulers/rapport-inscriptions').start(app);
+  } catch(e) {
+    console.warn('[rapport-cron] Scheduler non demarre:', e.message);
+  }
 })();
 // Lance un scan automatique des dossiers en retard
 (function startSlaScheduler() {
@@ -324,6 +347,14 @@ if (fs.existsSync(distPath)) {
 
   console.log('[SLA Scheduler] ✅ Démarré — vérification toutes les 6h');
 })();
+
+  // ── Scheduler KPI Stratégie 2027-2030 ──────────────────
+  try {
+    const { startKpiScheduler } = require('./schedulers/kpi-scheduler');
+    startKpiScheduler({ oraclePool, sqlPool });
+  } catch(e) {
+    console.warn('[kpi-scheduler] Non démarré:', e.message);
+  }
 
 app.use('/api', (req, res) => {
   res.status(404).json({ success: false, error: `Route inconnue : ${req.method} ${req.path}` });
@@ -363,12 +394,20 @@ async function start() {
   ]);
 
   app.listen(PORT, HOST, () => {
+    registerVersion();
     logger.info(`Serveur en ecoute sur ${HOST}:${PORT}`, {
       action  : 'SERVER_READY',
       url     : `http://localhost:${PORT}`,
       network : `http://<IP_SERVEUR>:${PORT}`,
       health  : `http://localhost:${PORT}/api/health`,
     });
+
+    // ── Scheduler rapport inscriptions (toutes les heures) ──
+    try {
+      // rapport scheduler démarré plus haut
+    } catch(e) {
+      logger.warn('[rapport-cron] Scheduler non demarre: ' + e.message);
+    }
   });
 }
 

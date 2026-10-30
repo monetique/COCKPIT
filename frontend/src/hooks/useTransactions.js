@@ -38,9 +38,10 @@ export function useTransactions() {
     page, pageSize,
   };
 
-  // Filtres sans pagination pour les stats
+  // Filtres pour les stats/graphiques — DATE UNIQUEMENT
+  // Les graphiques reflètent la totalité des transactions de la journée,
+  // indépendamment des filtres texte (marchand, action code, etc.)
   const statsFilters = {
-    ...applied,
     date_debut: toFrDate(applied.date_debut),
     date_fin  : toFrDate(applied.date_fin),
   };

@@ -18,6 +18,11 @@ const useAuthStore = create(
 
       setUser: (user) => set({ user }),
 
+      setAccessToken: (accessToken) => {
+        localStorage.setItem('ctp_access_token', accessToken);
+        set({ accessToken });
+      },
+
       logout: () => {
         localStorage.removeItem('ctp_access_token');
         localStorage.removeItem('ctp_refresh_token');

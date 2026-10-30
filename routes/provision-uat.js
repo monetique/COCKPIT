@@ -65,7 +65,7 @@ const UAT_CFG = {
 
   // SQL Oracle — champs fixes
   sql_permissions : '00000010000000000000000000000000000000000000000000000000000000000000000000000000',
-  sql_pwd         : '$v2$/oVp9fgy/kery+IVPe/XOCds20h+Jfghh7NUYuBpOOlTX7/QadiOKvCMYATvsUbkwkO1qZyAkPY0FXNt5dZHQ==',
+  sql_pwd         : '$v2$/oVp9fgy/kery+IVPe/XOCds20h+Jfghh7NUYuBpOOlTX7/QadiOKvCMYATvsUbkwkO1qYzyAkPY0FXNt5dZHQ==',
   sql_salt        : '6f232e92b04a61669d22ac33e5423892a5fdcf42b34288e67dffe101681e17bd',
   sql_institution : -1,
 };
@@ -106,7 +106,7 @@ function postJson(url, body) {
       });
     });
     req.on('error', reject);
-    req.setTimeout(20000, () => { req.destroy(new Error('Timeout 20s')); });
+    req.setTimeout(20000, () => { req.destroy(new Error('Timeout 30s')); });
     req.write(data);
     req.end();
   });
@@ -550,7 +550,6 @@ router.post('/:processing_id', requireAuth, async (req, res) => {
     const result = await runProvision(pid, req.user?.email || 'manual');
     await logAction(req, 'UAT_PROVISION', `merchant:${pid}`, {
       triggeredBy: 'manual',
-      apiBodySent: apiBody,
       ...result
     });
     return res.json(result);

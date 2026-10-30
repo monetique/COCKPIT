@@ -353,7 +353,7 @@ function genTempPassword() {
 function UsersTab() {
   const qc = useQueryClient();
   const [modal,  setModal]  = useState(null);
-  const [form,   setForm]   = useState({ prenom:'', nom:'', email:'', role:'operateur' });
+  const [form,   setForm]   = useState({ prenom:'', nom:'', email:'', role:'operateur', bank_code:'' });
   const [saving, setSaving] = useState(false);
   const [showPwd,setShowPwd]= useState(false);
 
@@ -369,7 +369,7 @@ function UsersTab() {
   };
 
   const openEdit = (u) => {
-    setForm({ prenom: u.prenom, nom: u.nom, email: u.email, role: u.role });
+    setForm({ prenom: u.prenom, nom: u.nom, email: u.email, role: u.role, bank_code: u.bank_code || '' });
     setModal({ mode:'edit', user: u });
   };
 
@@ -378,17 +378,23 @@ function UsersTab() {
       toast.error('Prénom, nom et email requis');
       return;
     }
+    if (form.role === 'banquier' && !form.bank_code.trim()) {
+      toast.error('Code banque obligatoire pour le rôle Banquier (2 chiffres)');
+      return;
+    }
     setSaving(true);
     try {
       if (modal.mode === 'add') {
         // Générer un mot de passe temporaire côté client
         const tempPassword = genTempPassword();
         const { data } = await createUser({
-          prenom  : form.prenom,
-          nom     : form.nom,
-          email   : form.email,
-          password: tempPassword,
-          role    : form.role,
+          prenom    : form.prenom,
+          nom       : form.nom,
+          email     : form.email,
+          password  : tempPassword,
+          role      : form.role,
+          bank_code : form.role === 'banquier' ? (form.bank_code || null) : null,
+          permissions: form.role === 'banquier' ? { can_upload_cahier: false, can_validate: false, can_action: false } : {},
         });
         // Afficher le mot de passe temporaire dans un toast persistant
         toast.success(
@@ -398,7 +404,7 @@ function UsersTab() {
         // Copier dans le presse-papier
         navigator.clipboard?.writeText(tempPassword).catch(() => {});
       } else {
-        await updateUser(modal.user.id, { prenom: form.prenom, nom: form.nom, role: form.role });
+        await updateUser(modal.user.id, { prenom: form.prenom, nom: form.nom, role: form.role, bank_code: form.role === 'banquier' ? (form.bank_code || null) : null });
         toast.success('Utilisateur mis à jour');
       }
       qc.invalidateQueries({ queryKey: ['users'] });
@@ -461,9 +467,13 @@ function UsersTab() {
                   <td className="text-xs font-mono text-secondary">{u.email}</td>
                   <td>
                     <span className={clsx('badge text-xs',
-                      u.role === 'admin' ? 'badge-info' : 'badge-neutral')}>
+                      u.role === 'admin' ? 'badge-info' :
+                      u.role === 'banquier' ? 'badge-warning' : 'badge-neutral')}>
                       {u.role}
                     </span>
+                    {u.bank_code && (
+                      <span className="ml-1 badge badge-neutral text-xs font-mono">{u.bank_code}</span>
+                    )}
                   </td>
                   <td>
                     <span className={clsx('badge text-xs', u.actif ? 'badge-success' : 'badge-neutral')}>
@@ -529,10 +539,21 @@ function UsersTab() {
                 <label className="block text-xs text-tertiary mb-1">Rôle</label>
                 <select value={form.role} onChange={e => setForm(p => ({...p, role: e.target.value}))} className="input">
                   <option value="operateur">Opérateur</option>
+                  <option value="supervisor">Superviseur</option>
                   <option value="admin">Administrateur</option>
-                  <option value="readonly">Lecture seule</option>
+                  <option value="banquier">Banquier</option>
                 </select>
               </div>
+              {form.role === 'banquier' && (
+                <div>
+                  <label className="block text-xs text-tertiary mb-1">Code banque * <span className="text-tertiary font-normal">(2 premiers chiffres du processing_id)</span></label>
+                  <input type="text" maxLength={2} value={form.bank_code}
+                    onChange={e => setForm(p => ({...p, bank_code: e.target.value.replace(/[^0-9]/g,'').slice(0,2)}))}
+                    placeholder="ex: 08"
+                    className="input font-mono w-24"/>
+                  <div className="text-xs text-tertiary mt-1">Le banquier ne verra que les marchands de cette banque.</div>
+                </div>
+              )}
               {modal.mode === 'add' && (
                 <div className="text-xs text-info bg-info-dim border border-info/20 rounded-lg px-3 py-2.5">
                   ℹ️ Un mot de passe temporaire sera généré automatiquement et affiché après la création. Il sera aussi copié dans le presse-papier.

@@ -1,35 +1,86 @@
-// src/components/layout/Sidebar.jsx
+// src/components/layout/Sidebar.jsx — Design Titanium
 import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard, ArrowLeftRight, Globe2, Shield,
-  Store, CheckSquare, Landmark, Bell,
-  Settings, LogOut, ChevronRight, FileText, Sun, Moon
-} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import useAuthStore  from '@/store/authStore';
-import useThemeStore from '@/store/themeStore';
 import { logout }    from '@/api/auth';
+import client        from '@/api/client';
 import toast         from 'react-hot-toast';
 import clsx          from 'clsx';
 
-const NAV = [
-  { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard'     },
-  { to: '/transactions',  icon: ArrowLeftRight,  label: 'CLICTOPAY'  },
-  { to: '/paysmart',      icon: Globe2,          label: 'PAYSMART'      },
-  { to: '/acs',           icon: Shield,          label: 'ACS Metrics'   },
-  { sep: true },
-  { to: '/merchants',     icon: Store,           label: 'Marchands'     },
-  { to: '/validation',    icon: CheckSquare,     label: 'Validation'    },
-  { sep: true },
-  { to: '/banks',         icon: Landmark,        label: 'Banques',      role: 'admin' },
-  { to: '/alerts',        icon: Bell,            label: 'Alertes',      role: 'admin' },
-  { to: '/logs',          icon: FileText,        label: 'Journaux',     role: 'admin' },
-  { to: '/settings',      icon: Settings,        label: 'Paramètres',   role: 'admin' },
+// ── Structure de navigation par groupes ──────────────────────────
+const NAV_GROUPS = [
+  {
+    label: 'Supervision',
+    items: [
+      { to:'/dashboard',          icon:'dashboard',        label:'Dashboard',           roles:['admin','directeur','pilotage','operateur','lecteur','dg'] },
+      { to:'/transactions',       icon:'swap_horiz',       label:'ClicToPay',           roles:['admin','directeur','pilotage','operateur','lecteur'] },
+      { to:'/paysmart',           icon:'language',         label:'Paysmart',            roles:['admin','directeur','pilotage','operateur','lecteur'] },
+      { to:'/acs',                icon:'verified_user',    label:'ACS Metrics',         roles:['admin','directeur','pilotage','operateur','lecteur'] },
+    ]
+  },
+  {
+    label: 'Gestion commerciale',
+    items: [
+      { to:'/merchants',          icon:'store',            label:'Marchands',           roles:['admin','directeur','pilotage','operateur','banquier'] },
+      { to:'/validation',         icon:'fact_check',       label:'Validation',          roles:['admin','directeur','pilotage','operateur','banquier'] },
+      { to:'/banques-dashboard',  icon:'account_balance',  label:'Vue banques',         roles:['admin','directeur','pilotage','banquier'] },
+      { to:'/inscriptions',       icon:'school',           label:'Inscriptions CNTE',   roles:['admin','directeur','pilotage'] },
+    ]
+  },
+  {
+    label: 'Facturation',
+    items: [
+      { to:'/psm-facturation',    icon:'credit_card',      label:'Facturation PSM',     roles:['admin','directeur','pilotage'] },
+      { to:'/facturation',        icon:'receipt_long',     label:'Facturation CNTE',    roles:['admin','directeur','pilotage'] },
+      { to:'/rapports',           icon:'description',      label:'Rapports PDF',        roles:['admin','directeur','pilotage'] },
+    ]
+  },
+  {
+    label: 'Réconciliation',
+    items: [
+      { to:'/reconciliation',     icon:'merge',            label:'Réconciliation',      roles:['admin','directeur','pilotage'] },
+    ]
+  },
+  {
+    label: 'Stratégie 2027-2030',
+    items: [
+      { to:'/strategie',          icon:'bar_chart',        label:'Synthèse DG',         roles:['admin','directeur','dg','pilotage'] },
+      { to:'/strategie/switch',   icon:'bolt',             label:'Switch national',     roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/tunpay',   icon:'trending_up',      label:'TUNPAY',              roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/ctp',      icon:'lock',             label:'ClicToPay',           roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/data',     icon:'storage',          label:'Data & Fraude',       roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/openbanking', icon:'open_in_new',   label:'Open Banking',        roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/paysmart', icon:'language',         label:'Paysmart',            roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/programmes', icon:'menu_book',      label:'Programmes de place', roles:['admin','directeur','pilotage'] },
+      { to:'/strategie/incidents', icon:'warning',         label:'Incidents & MTTR',    roles:['admin','directeur','chef_division','pilotage'] },
+      { to:'/strategie/baselines',   icon:'my_location',   label:'Baselines & Cibles',  roles:['admin','directeur','pilotage'] },
+      { to:'/strategie/fournisseurs', icon:'build',        label:'Fournisseurs / BPC',  roles:['admin','directeur','pilotage'] },
+    ]
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to:'/banks',              icon:'account_balance',  label:'Banques',             roles:['admin'] },
+      { to:'/alerts',             icon:'notifications',    label:'Alertes',             roles:['admin'] },
+      { to:'/users',              icon:'group',            label:'Utilisateurs',        roles:['admin'] },
+      { to:'/logs',               icon:'receipt',          label:'Journaux',            roles:['admin'] },
+      { to:'/version',            icon:'sell',             label:'Versions',            roles:['admin','directeur'] },
+      { to:'/settings',           icon:'settings',         label:'Paramètres',          roles:['admin'] },
+    ]
+  },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { user, logout: storeLogout, refreshToken, isAdmin } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
+  const { user, logout: storeLogout, refreshToken } = useAuthStore();
   const navigate = useNavigate();
+
+  // Version courante — appel léger toutes les 5 min
+  const { data: versionData } = useQuery({
+    queryKey: ['version-current'],
+    queryFn : () => client.get('/version/current').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    retry   : false,
+  });
 
   const handleLogout = async () => {
     try { await logout(refreshToken); } catch {}
@@ -38,127 +89,131 @@ export default function Sidebar({ collapsed, onToggle }) {
     navigate('/login', { replace: true });
   };
 
+  const canSee = (roles) => roles.includes(user?.role);
+
   return (
     <aside className={clsx(
-      'flex flex-col h-screen bg-surface border-r border-border',
-      'transition-all duration-200 ease-in-out shrink-0',
-      collapsed ? 'w-14' : 'w-56'
-    )}>
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-14 border-b border-border shrink-0">
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <div className="flex gap-0.5">
-            <div className="w-2 h-2 rounded-sm bg-brand" />
-            <div className="w-2 h-2 rounded-sm bg-brand-l opacity-60" />
-          </div>
-          <div className="flex gap-0.5">
-            <div className="w-2 h-2 rounded-sm bg-brand opacity-40" />
-            <div className="w-2 h-2 rounded-sm bg-success" />
-          </div>
-        </div>
+      'flex flex-col h-screen shrink-0',
+      'border-r border-[#D1D9E3]',
+      'transition-all duration-200 ease-in-out',
+      collapsed ? 'w-14' : 'w-60'
+    )}
+    style={{ background: '#EBEEF3' }}>
+
+      {/* ── Logo + toggle ──────────────────────────────────────── */}
+      <div className={clsx(
+        'flex items-center h-14 px-3 border-b border-[#D1D9E3] shrink-0',
+        collapsed ? 'justify-center' : 'justify-between'
+      )}>
         {!collapsed && (
-          <div className="overflow-hidden">
-            <div className="text-sm font-semibold text-primary leading-tight truncate">ClicToPay</div>
-            <div className="text-xs text-tertiary truncate">SMT COCKPIT v2</div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="material-symbols-outlined ms-filled text-[#0B264A] text-xl">hub</span>
+            <span className="font-display font-black text-sm text-[#0B264A] tracking-tight truncate">
+              SMT Cockpit
+            </span>
           </div>
         )}
+        <button
+          onClick={onToggle}
+          title={collapsed ? 'Agrandir' : 'Réduire'}
+          className={clsx(
+            'w-7 h-7 flex items-center justify-center rounded-lg',
+            'text-[#5B6B82] hover:text-[#0B264A] hover:bg-white/60',
+            'transition-colors shrink-0',
+            collapsed && 'mx-auto'
+          )}
+        >
+          <span className={clsx(
+            'material-symbols-outlined ms-sm transition-transform duration-200',
+            !collapsed && 'rotate-180'
+          )}>
+            chevron_right
+          </span>
+        </button>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {NAV.map((item, idx) => {
-          if (item.sep) return (
-            <div key={idx} className="my-2 border-t border-border" />
-          );
-          if (item.role === 'admin' && !isAdmin()) return null;
+      {/* ── Navigation ─────────────────────────────────────────── */}
+      <nav className="flex-1 overflow-y-auto py-2 px-1.5 space-y-0.5">
+        {NAV_GROUPS.map(group => {
+          const visibleItems = group.items.filter(item => canSee(item.roles));
+          if (!visibleItems.length) return null;
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => clsx(
-                'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium',
-                'transition-all duration-100 group relative',
-                isActive
-                  ? 'text-primary bg-surface3 border-l-2 border-brand pl-[10px]'
-                  : 'text-secondary hover:text-primary hover:bg-surface3'
-              )}
-              title={collapsed ? item.label : undefined}
-            >
-              <item.icon size={16} className="shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-              {/* Tooltip si collapsed */}
-              {collapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-surface3 border border-border2
-                               rounded text-xs text-primary whitespace-nowrap
-                               opacity-0 group-hover:opacity-100 pointer-events-none
-                               transition-opacity z-50">
-                  {item.label}
+            <div key={group.label} className="mb-1">
+              {/* Label de groupe */}
+              {!collapsed ? (
+                <div className="px-2.5 py-1.5 text-[9px] font-bold text-[#8FA0B4] uppercase tracking-widest">
+                  {group.label}
                 </div>
+              ) : (
+                <div className="border-t border-[#D1D9E3] my-1.5 mx-1" />
               )}
-            </NavLink>
+
+              {/* Items */}
+              {visibleItems.map(item => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/dashboard'}
+                  title={collapsed ? item.label : undefined}
+                  className={({ isActive }) => clsx(
+                    'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all duration-150',
+                    collapsed && 'justify-center px-2',
+                    isActive
+                      ? 'bg-white text-[#0B264A] font-semibold border-l-2 border-[#0B264A]'
+                      : 'text-[#5B6B82] hover:text-[#1A2536] hover:bg-white/60'
+                  )}
+                  style={({ isActive }) => isActive ? { boxShadow: '0 1px 3px rgba(0,0,0,0.06)' } : {}}
+                >
+                  <span className={clsx(
+                    'material-symbols-outlined ms-sm shrink-0',
+                    'transition-none'
+                  )}>
+                    {item.icon}
+                  </span>
+                  {!collapsed && (
+                    <span className="truncate text-xs">{item.label}</span>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           );
         })}
       </nav>
 
-      {/* User + Logout */}
-      <div className="border-t border-border p-2 shrink-0">
-        {!collapsed && (
-          <div className="px-3 py-2 mb-1">
-            <div className="text-xs font-medium text-primary truncate">
-              {user?.prenom} {user?.nom}
-            </div>
-            <div className="text-xs text-tertiary truncate">{user?.email}</div>
-            <span className={clsx(
-              'inline-block mt-1 text-xs px-1.5 py-0.5 rounded',
-              user?.role === 'admin'
-                ? 'bg-info-dim text-info'
-                : 'bg-surface3 text-tertiary'
-            )}>
-              {user?.role}
+      {/* ── Footer ─────────────────────────────────────────────── */}
+      <div className="border-t border-[#D1D9E3] p-2 shrink-0 space-y-0.5">
+
+        {/* Déconnexion */}
+        <button
+          onClick={handleLogout}
+          className={clsx(
+            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg w-full',
+            'text-xs text-[#5B6B82] hover:text-[#DC2626] hover:bg-[#FEF2F2]',
+            'transition-colors',
+            collapsed && 'justify-center'
+          )}
+          title={collapsed ? 'Déconnexion' : undefined}
+        >
+          <span className="material-symbols-outlined ms-sm shrink-0">logout</span>
+          {!collapsed && <span>Déconnexion</span>}
+        </button>
+
+        {/* Badge version */}
+        {!collapsed && versionData?.version && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1">
+            <span className="material-symbols-outlined ms-xs text-[#8FA0B4]">sell</span>
+            <span className="text-[9px] font-mono text-[#8FA0B4]">
+              v{versionData.version}
             </span>
           </div>
         )}
-
-        {/* Toggle collapse */}
-        <button
-          onClick={onToggle}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
-                     text-tertiary hover:text-primary hover:bg-surface3
-                     transition-all duration-150 text-xs"
-        >
-          <ChevronRight size={14} className={clsx(
-            'transition-transform duration-200',
-            !collapsed && 'rotate-180'
-          )} />
-          {!collapsed && 'Réduire'}
-        </button>
-
-        {/* Toggle thème */}
-        <button
-          onClick={toggleTheme}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg
-                     text-secondary hover:text-primary hover:bg-surface3
-                     transition-all duration-150 text-sm"
-          title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
-        >
-          {theme === 'dark'
-            ? <Sun  size={14} className="shrink-0 text-warning" />
-            : <Moon size={14} className="shrink-0 text-info" />}
-          {!collapsed && (
-            <span>{theme === 'dark' ? 'Mode clair' : 'Mode sombre'}</span>
-          )}
-        </button>
-
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg
-                     text-danger/70 hover:text-danger hover:bg-danger-dim
-                     transition-all duration-150 text-sm"
-          title={collapsed ? 'Déconnexion' : undefined}
-        >
-          <LogOut size={14} className="shrink-0" />
-          {!collapsed && 'Déconnexion'}
-        </button>
+        {collapsed && versionData?.version && (
+          <div className="flex justify-center py-1" title={`v${versionData.version}`}>
+            <span className="text-[9px] font-mono text-[#8FA0B4]">
+              v{versionData.version.split('.')[0]}
+            </span>
+          </div>
+        )}
       </div>
     </aside>
   );

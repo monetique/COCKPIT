@@ -150,8 +150,8 @@ export default function TransactionsPage() {
       {/* KPIs */}
       {data && <TransactionKPIs data={data} stats={stats} statsLoading={statsQuery.isFetching} />}
 
-      {/* Graphiques */}
-      {showCharts && data && <TransactionCharts data={data} />}
+      {/* Graphiques — données de toute la journée (stats) et non de la sélection paginée */}
+      {showCharts && <TransactionCharts data={stats} loading={statsQuery.isFetching} />}
 
       {/* Tableau */}
       <TransactionTable

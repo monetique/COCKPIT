@@ -12,8 +12,19 @@ services:
     image: smt-cockpit:latest
     container_name: smt-cockpit-app
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
     ports:
       - "${PORT:-3005}:3000"
+    extra_hosts :
+        - "3ds2.clictopay.com:172.17.11.19"
+        - "ipay.clictopay.com:172.17.11.20"
+        - "test.clictopay.com:172.17.11.3"
+    
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -86,6 +97,7 @@ services:
     volumes:
       - smt-logs:/app/logs
       - smt-cahiers:/app/cahiers_outbox
+      - /data/applications/COCKPIT/rapports:/app/rapports
 
     depends_on:
       postgres:
@@ -104,7 +116,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: smt-cockpit-db
-    restart: unless-stopped
+    restart: unless-stopped 
     environment:
       POSTGRES_DB:       ${PG_DATABASE:-clictopay_db}
       POSTGRES_USER:     ${PG_USER:-postgres}
@@ -144,3 +156,4 @@ networks:
   smt-network:
     name: smt-cockpit-network
     driver: bridge
+

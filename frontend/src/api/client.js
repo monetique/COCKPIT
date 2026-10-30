@@ -1,9 +1,10 @@
 // src/api/client.js — Axios avec intercepteurs JWT
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
 const client = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 120000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -48,6 +49,7 @@ client.interceptors.response.use(
           const { data } = await axios.post('/api/auth/refresh', { refreshToken });
           const newToken = data.accessToken;
           localStorage.setItem('ctp_access_token', newToken);
+          useAuthStore.getState().setAccessToken(newToken);
           processQueue(null, newToken);
           original.headers.Authorization = `Bearer ${newToken}`;
           return client(original);

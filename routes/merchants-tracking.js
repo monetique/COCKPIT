@@ -3,6 +3,7 @@ const express   = require('express');
 const router    = express.Router();
 const { query, pool } = require('../db/postgres');
 const { requireAuth } = require('../middleware/auth');
+const { bankFilter, enforceBankAccess } = require('../middleware/banquier');
 const { logAction }   = require('../middleware/audit');
 
 // ── GET /api/tracking/stats ───────────────────────────────
@@ -27,13 +28,24 @@ router.get('/stats', requireAuth, async (req, res) => {
 router.get('/export', requireAuth, async (req, res) => {
   try {
     const result = await query(
-      `SELECT processing_id, raison_sociale, email_contact,
+      req.bankFilter?.isBanquier
+        ? `SELECT mt.processing_id, mt.raison_sociale, mt.email_contact,
+              mt.statut, mt.date_import, mt.date_prise_en_charge, mt.date_envoi_recettes,
+              mt.date_reception_recettes, mt.date_validation, mt.date_notif_banque, mt.date_production,
+              mt.tracking_ref_test, mt.tracking_ref_prod, mt.notes, mt.bank_name,
+              mt.terminal_id, mt.mcc, mt.site_url,
+              mt.uat_status, mt.uat_merchant_id, mt.uat_provisioned_at, mt.uat_error_message
+           FROM merchants_tracking mt
+           WHERE SUBSTRING(mt.processing_id, 1, 2) = $1
+           ORDER BY mt.date_import DESC`
+        : `SELECT processing_id, raison_sociale, email_contact,
               statut, date_import, date_prise_en_charge, date_envoi_recettes,
               date_reception_recettes, date_validation, date_notif_banque, date_production,
               tracking_ref_test, tracking_ref_prod, notes, bank_name,
               terminal_id, mcc, site_url,
               uat_status, uat_merchant_id, uat_provisioned_at, uat_error_message
-       FROM merchants_tracking ORDER BY date_import DESC`, []
+           FROM merchants_tracking ORDER BY date_import DESC`,
+      req.bankFilter?.isBanquier ? [req.bankFilter.code] : []
     );
     res.json({ success: true, data: result.rows });
   } catch(err) {
@@ -196,8 +208,8 @@ router.post('/import', requireAuth, async (req, res) => {
 });
 
 // ── GET /api/tracking — liste ─────────────────────────────
-router.get('/', requireAuth, async (req, res) => {
-  const { statut, search, limit = 500, offset = 0 } = req.query;
+router.get('/', requireAuth, bankFilter, async (req, res) => {
+  const { statut, search, banque, limit = 500, offset = 0 } = req.query;
   try {
     // ── RÈGLE GÉNÉRALE appliquée à chaque lecture ──────────
     // 1. Marchands avec oracle_prod=true mais statut != en_production → corriger
@@ -232,6 +244,16 @@ router.get('/', requireAuth, async (req, res) => {
     if (search?.trim()) {
       params.push(`%${search.trim()}%`);
       whereClauses.push(`(mt.processing_id ILIKE $${params.length} OR mt.raison_sociale ILIKE $${params.length})`);
+    }
+    // Filtre banque admin (2 premiers chars du processing_id)
+    if (banque?.trim()) {
+      params.push(banque.trim().padStart(2, '0'));
+      whereClauses.push(`SUBSTRING(mt.processing_id, 1, 2) = $${params.length}`);
+    }
+    // Filtre automatique banquier (étanchéité)
+    if (req.bankFilter?.isBanquier) {
+      params.push(req.bankFilter.code);
+      whereClauses.push(`SUBSTRING(mt.processing_id, 1, 2) = $${params.length}`);
     }
 
     const where = whereClauses.length ? 'WHERE ' + whereClauses.join(' AND ') : '';

@@ -64,19 +64,31 @@ router.get('/dropdowns', requireAuth, async (req, res) => {
   if (!pool) return res.status(503).json({ success: false, error: 'SQL Server non connecté — vérifiez MSSQL_* dans .env' });
   try {
     // TOP 500 + timeout 8s pour éviter le scan complet de la table
-    const req8s = () => pool.request().timeout(8000);
-    const tbl   = '[switchdb].[dbo].[TO_QLIK_BI_new]';
+    // Cache mémoire 30min — évite le DISTINCT sur 1M+ lignes à chaque requête
+    const now = Date.now();
+    if (req.app._dropdownsCache && (now - req.app._dropdownsCache.ts) < 30 * 60 * 1000) {
+      return res.json({ success: true, ...req.app._dropdownsCache.data, cached: true });
+    }
+
+    const tbl = '[switchdb].[dbo].[TO_QLIK_BI_new]';
+    // Utiliser TOP 100 sur un échantillon récent pour être rapide
+    const sample = `(SELECT TOP 50000 [FSP],[Etat],[Facturier] FROM ${tbl}) AS s`;
     const [fsp, etat, facturier] = await Promise.all([
-      req8s().query(`SELECT DISTINCT TOP 500 [FSP]       AS val FROM ${tbl} WHERE [FSP]       IS NOT NULL ORDER BY [FSP]`),
-      req8s().query(`SELECT DISTINCT TOP 500 [Etat]      AS val FROM ${tbl} WHERE [Etat]      IS NOT NULL ORDER BY [Etat]`),
-      req8s().query(`SELECT DISTINCT TOP 500 [Facturier] AS val FROM ${tbl} WHERE [Facturier] IS NOT NULL ORDER BY [Facturier]`),
+      pool.request().query(`SELECT DISTINCT [FSP] AS val FROM ${sample} WHERE [FSP] IS NOT NULL ORDER BY [FSP]`),
+      pool.request().query(`SELECT DISTINCT [Etat] AS val FROM ${sample} WHERE [Etat] IS NOT NULL ORDER BY [Etat]`),
+      pool.request().query(`SELECT DISTINCT [Facturier] AS val FROM ${sample} WHERE [Facturier] IS NOT NULL ORDER BY [Facturier]`),
     ]);
-    res.json({
-      success  : true,
+
+    const dropdownData = {
       fsp      : fsp.recordset.map(r => r.val),
       etat     : etat.recordset.map(r => r.val),
-      facturier: facturier.recordset.map(r => r.val)
-    });
+      facturier: facturier.recordset.map(r => r.val),
+    };
+
+    // Mettre en cache
+    req.app._dropdownsCache = { ts: now, data: dropdownData };
+
+    res.json({ success: true, ...dropdownData });
   } catch (err) {
     console.error('❌ switch/dropdowns:', err.message);
     // Retourner des listes vides plutôt qu'une erreur 500

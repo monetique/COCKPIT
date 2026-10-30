@@ -44,6 +44,7 @@ export function useMerchants() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [dbSearch,     setDbSearch]     = useState('');
   const [dbStatut,     setDbStatut]     = useState('all');
+  const [dbBanque,     setDbBanque]     = useState('');  // filtre par code banque (2 chars)
   const [activeTab,    setActiveTab]    = useState('db'); // 'db' | 'excel'
 
   // ── Données Oracle ────────────────────────────────────
@@ -60,10 +61,11 @@ export function useMerchants() {
 
   // ── Données PostgreSQL (tracking) ────────────────────
   const trackingQuery = useQuery({
-    queryKey: ['tracking', dbStatut, dbSearch],
+    queryKey: ['tracking', dbStatut, dbSearch, dbBanque],
     queryFn : () => getTracking({
       statut: dbStatut !== 'all' ? dbStatut : undefined,
       search: dbSearch || undefined,
+      banque: dbBanque || undefined,
       limit : 500,
     }).then(r => r.data),
     staleTime: 10_000,
@@ -388,6 +390,7 @@ export function useMerchants() {
     dbTotal     : trackingQuery.data?.total     || 0,
     dbSearch, setDbSearch,
     dbStatut, setDbStatut,
+    dbBanque, setDbBanque,
     // Excel
     excelRows, enriched, filteredExcel, excelStats,
     importExcel, clearExcel,
